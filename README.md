@@ -1,8 +1,8 @@
 # EIP-8141 Features
 
-Feature proposals, primitive definitions, developer feedback, and recommended fork-scope analysis for [EIP-8141](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-8141.md) (Frame Transaction) — the native account-abstraction proposal for Ethereum.
+Feature proposals, primitive definitions, and recommended fork-scope analysis for [EIP-8141](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-8141.md) (Frame Transaction) — the native account-abstraction proposal for Ethereum.
 
-The work here originates from a research dive into how to extend EIP-8141 with additional primitives (2D nonces, validity windows, delegated permissions, guarantors) **without overwhelming core-dev review or breaking account encoding**. Every proposal has been iterated against simulated core-dev and wallet-dev review pressure, then distilled into a recommended fork shape.
+The work here originates from a research dive into how to extend EIP-8141 with additional primitives (2D nonces, validity windows, delegated permissions, guarantors) **without overwhelming core-dev review or breaking account encoding**. Each proposal has been iterated against core-dev and wallet-dev review pressure, then distilled into a recommended fork shape.
 
 ---
 
@@ -34,12 +34,10 @@ See [`docs/summary.md`](docs/summary.md) for the short pitch, [`docs/evaluation.
 
 ```
 docs/
-├── summary.md               # 300-400 word pitch for the recommended fork shape
+├── summary.md               # Executive pitch for the recommended fork shape
 ├── evaluation.md            # Scenario analysis (A/B/C/D/E fork combinations)
-├── plan.md                  # Actionable per-proposal edits
+├── plan.md                  # Sequencing, uncertainties, order of work
 ├── research.md              # 14-question deep dive with picks
-├── coredev-feedback.md      # Ethereum core-dev review of the proposals
-├── walletdev-feedback.md    # Wallet / SDK / hardware-wallet developer review
 │
 ├── 2d-nonces.md             # Feature: parallel nonce streams per account
 ├── validity-windows.md      # Feature: envelope-level time bounds on txs

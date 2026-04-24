@@ -1,6 +1,6 @@
 # Summary — Minimal-Scope AA Fork with a Permissions Follow-On
 
-_Author: Claude. Scratch doc, not indexed on the site._
+_Scratch doc, not indexed on the site._
 
 The recommended shape for EIP-8141's first successful landing is a minimal-scope AA fork with three features, followed by a dedicated permissions fork once `execution_authority` is established.
 

@@ -1,6 +1,6 @@
 # EIP-8141 Primitive: Execution Authority
 
-_Author: Claude. Scratch doc, not indexed on the site. Prerequisite for the permissions proposal._
+_Scratch doc, not indexed on the site. Prerequisite for the permissions proposal._
 
 ## Problem
 

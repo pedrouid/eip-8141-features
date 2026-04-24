@@ -1,6 +1,6 @@
 # EIP-8141 Primitive: Guarantors
 
-_Author: Claude. Scratch doc, not indexed on the site. Assumes PR #11555 (derekchiang, Apr 22) lands in roughly its proposed shape; the design is still iterating and the exact flags/scopes may change._
+_Scratch doc, not indexed on the site. Assumes PR #11555 (derekchiang, Apr 22) lands in roughly its proposed shape; the design is still iterating and the exact flags/scopes may change._
 
 ## What guarantors are
 

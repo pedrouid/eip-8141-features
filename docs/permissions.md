@@ -1,6 +1,6 @@
 # Delegated Permissions for EIP-8141
 
-_Author: Claude. Scratch doc, not indexed on the site._
+_Scratch doc, not indexed on the site._
 
 ERC-7710/7715-style delegated permissions, narrow v1. Depends on a standalone `execution-authority` EIP. Ships as a **v2 follow-on fork**. Per `evaluation.md`, ~85 % of permissions UX is deliverable via contract-layer work on base-fork primitives.
 

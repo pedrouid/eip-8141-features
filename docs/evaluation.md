@@ -1,6 +1,6 @@
 # Evaluation — Fork Scope Scenarios for EIP-8141
 
-_Author: Claude. Scratch doc, not indexed on the site. Evaluates five candidate fork-scope combinations and recommends the best compromise._
+_Scratch doc, not indexed on the site. Evaluates five candidate fork-scope combinations and recommends the best compromise._
 
 Scenarios:
 

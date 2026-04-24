@@ -1,6 +1,6 @@
 # Research — Deep Dive on the 14 Open Questions
 
-_Author: Claude. Scratch doc, not indexed on the site. Works through the open questions from `plan.md` with options, tradeoffs, and a pick per question._
+_Scratch doc, not indexed on the site. Works through the open questions from `plan.md` with options, tradeoffs, and a pick per question._
 
 ## Validity Windows
 

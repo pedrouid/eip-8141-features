@@ -1,6 +1,6 @@
 # EIP-8141 Primitive: Sighash Binding for Protocol-Visible Frame Data
 
-_Author: Claude. Scratch doc, not indexed on the site. Prerequisite for the 2D-nonces and permissions proposals._
+_Scratch doc, not indexed on the site. Prerequisite for the 2D-nonces and permissions proposals._
 
 ## Problem
 

@@ -1,6 +1,6 @@
 # Validity Windows for EIP-8141
 
-_Author: Claude. Scratch doc, not indexed on the site._
+_Scratch doc, not indexed on the site._
 
 Adds protocol-level validity-window support to EIP-8141 so time-bounded transactions propagate through the public (restrictive) mempool instead of expansive/private tiers.
 

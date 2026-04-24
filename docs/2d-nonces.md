@@ -1,6 +1,6 @@
 # 2D Nonces for EIP-8141
 
-_Author: Claude. Scratch doc, not indexed on the site._
+_Scratch doc, not indexed on the site._
 
 Gives every EIP-8141 account protocol-native parallel nonce streams via one envelope field and a system contract (EIP-4788 / EIP-2935 pattern). No opcodes, precompiles, frame-model changes, or account-encoding changes.
 
