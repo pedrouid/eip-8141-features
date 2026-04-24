@@ -1,436 +1,201 @@
 # Core Developer Feedback on 2D Nonces, Permissions, and Validity Windows
 
-Perspective: Ethereum core developer reviewing whether these additions can be specified, implemented by clients, and carried through the post-quantum / FOCIL / VOPS roadmap without creating hidden consensus or policy debt.
+Perspective: Ethereum core developer reviewing whether these additions can be specified, implemented by clients, and carried through the PQ / FOCIL / VOPS roadmap without creating hidden consensus or policy debt.
 
 ## Executive assessment
 
-The revised drafts materially address the main issues from the previous review. In particular:
+The revised drafts materially address the main issues from the previous review:
 
-- **2D nonces** now put `nonce_key` in the transaction envelope instead of a fake "APPROVE frame" or VERIFY calldata prefix. That fixes both prior correctness bugs: `APPROVE` is an opcode, not a frame, and VERIFY calldata is intentionally elided from `compute_sig_hash`.
-- **2D nonces** keep the existing `tx.nonce` as the stream sequence. That removes the ambiguity around ignored or duplicated nonce fields.
-- **2D nonces** now acknowledge that scalar nonce to nonce-map is a real state-model change, and add a consensus first-use surcharge for non-zero lanes. That is the right category of answer to the state-growth DoS concern.
-- **Permissions** now introduce the missing `execution_authority` primitive instead of assuming SENDER frames can magically execute as the delegator. That is the most important semantic correction.
-- **Permissions** now treat the DelegationManager as consensus-coordinated, split static validation from stateful settlement, restrict v1 to one-hop execution-only authorization, and stop relying on ERC-1271 as the protocol interface.
-- **Validity windows** correctly move time bounds into the envelope instead of VERIFY logic, which is the only credible way to keep time-bounded transactions in the restrictive public mempool.
+- **2D nonces** put `nonce_key` in the envelope instead of a fake "APPROVE frame" or VERIFY calldata prefix. Fixes both prior correctness bugs: `APPROVE` is an opcode, not a frame; VERIFY calldata is elided from `compute_sig_hash`.
+- **2D nonces** keep the existing `tx.nonce` as the stream sequence, removing envelope-nonce ambiguity.
+- **2D nonces** now acknowledge that scalar→map is a real state-model change, adding a consensus first-use surcharge for non-zero lanes.
+- **Permissions** introduce the missing `execution_authority` primitive instead of assuming SENDER frames magically execute as the delegator.
+- **Permissions** treat the DelegationManager as consensus-coordinated, split validation from settlement, restrict v1 to one-hop execution-only, and stop relying on ERC-1271.
+- **Validity windows** correctly move time bounds into the envelope — the only credible way to keep time-bounded txs on the restrictive public mempool.
 
-The direction is now coherent. The remaining issue is not "these drafts are impossible"; it is that they collectively expand EIP-8141 from a frame-transaction EIP into a bundle of account-model, transaction-envelope, mempool-policy, and system-contract changes. That may still be the right tradeoff, but it should be presented as a package with explicit fork scope, not as cheap add-ons.
+The direction is coherent. Remaining issue: these drafts collectively expand EIP-8141 from a frame-tx EIP into a bundle of account-model, envelope, mempool-policy, and system-contract changes. That may be the right tradeoff, but present it as a package with explicit fork scope, not cheap add-ons.
 
-My core-dev posture would be:
+**My core-dev posture**:
 
-1. **Validity windows are the easiest to standardize.** They are envelope-only, deterministic, useful for PQ/encrypted-mempool flows, and low-risk for VOPS.
-2. **2D nonces are feasible but need client-state design before they are ready.** The envelope shape is now right; the hard part is state representation, witnesses, sync, RPC, and lane-allocation accounting.
-3. **Permissions are useful but not a minimal EIP-8141 dependency.** The revised design is much more honest, but it depends on `execution_authority`, a canonical manager, post-op semantics, and probably guarantors. That is a larger feature set than I would want on the critical path for the first native-AA fork.
-
-## Check Against Previous Feedback
-
-### 2D nonces
-
-The prior review's main blockers were:
-
-| Previous blocker | Current status |
-|---|---|
-| Claimed an "APPROVE frame" exists | **Fixed.** The proposal now uses an envelope field and does not rely on APPROVE-frame calldata. |
-| Put nonce data in VERIFY calldata, which is elided from the sighash | **Fixed.** `nonce_key` is envelope-native and `tx.nonce` remains the sequence, so both are signed. |
-| Left existing `tx.nonce` ambiguous | **Fixed.** `tx.nonce` is explicitly the stream sequence. |
-| Treated scalar-to-map nonce state as a rename | **Partially fixed.** The draft now names account-object subtrie, witnesses, sync, and address derivation, but the exact trie encoding and client migration rules are still not specified. |
-| Treated storage-growth DoS as mempool-only | **Fixed in category.** First-use lane allocation is now consensus-priced. The exact gas value and accounting still need specification. |
-| Overloaded `eth_getTransactionCount` | **Fixed.** The draft now proposes `eth_getTransactionCountByKey`. |
-
-This is a real improvement. The proposal is now in the right design family.
-
-### Permissions
-
-The prior review's main blockers were:
-
-| Previous blocker | Current status |
-|---|---|
-| No way for SENDER frames to execute as an account other than `tx.sender` | **Fixed conceptually.** `execution_authority` is now an explicit tx-scoped variable. |
-| Confused `tx.sender`, frame target, caller, and delegator | **Mostly fixed.** The examples now state `tx.sender = delegate`, `execution_authority = delegator`. |
-| Relied on tx sighash coverage of delegation data in VERIFY calldata | **Fixed by separation.** Delegation data is authenticated by an independent delegation digest, while caveats inspect signed SENDER frames. |
-| Used `STATICCALL` for replay consumption, events, quotas, and hooks | **Partially fixed.** Validation and settlement are split. v1 still needs a precise protocol hook for when `consumeAndFinalize` runs and what happens on SENDER-frame revert. |
-| Called the manager a convention while default code calls it | **Fixed.** Manager address/code hash/immutability are now consensus-coordinated. |
-| Overstated restrictive mempool compatibility | **Partially fixed.** v1 stateless caveats fit better; shared-state caveats are moved behind guarantors. The guarantor path is still speculative until that PR's shape is final. |
-
-The permissions rewrite no longer has the obvious semantic hole. It is now implementable in principle, but it is no longer small.
+1. **Validity windows are easiest to standardize.** Envelope-only, deterministic, useful for PQ / encrypted-mempool flows, low-risk for VOPS.
+2. **2D nonces are feasible but need client-state design first.** Envelope shape is right; hard part is state representation, witnesses, sync, RPC, lane-allocation accounting.
+3. **Permissions are useful but not a minimal 8141 dependency.** Semantically repaired but depends on `execution_authority`, a canonical manager, post-op semantics, and probably guarantors — too large for the critical path for the first native-AA fork.
 
 ## 2D Nonces
 
 ### Feasibility
 
-The envelope shape is correct:
+Envelope shape is correct. Consensus check `tx.nonce == state[tx.sender].nonces[tx.nonce_key]` is clean for signing, replacement, mempool readiness, wallet models.
 
-```text
-[chain_id, nonce_key, nonce, sender, frames, fees...]
-```
+The hard part is state. Clients treat account nonce as a scalar. A sparse per-account map affects trie encoding, witness shape, state sync, pruning, database layout, RPC, empty-account semantics, txpool indexing, execution accounting, consensus tests.
 
-`nonce_key` selects the stream, `tx.nonce` remains the sequence, and consensus checks:
+Draft recommends an account-object subtrie. Plausible, but must be specified down to encoding — how committed, how it interacts with existing account RLP fields, whether this waits for a broader state-tree transition.
 
-```text
-tx.nonce == state[tx.sender].nonces[tx.nonce_key]
-```
+### VOPS compatibility
 
-That is clean for signing, replacement, mempool readiness, and wallet mental models. It also aligns with the native clean-slate direction other proposals are converging on.
-
-The difficult part is state. Ethereum clients currently treat account nonce as a scalar in the account object. Turning it into a sparse per-account map is not a local transaction-pool change. It affects:
-
-- account trie encoding,
-- witness shape,
-- state sync and healing,
-- pruning,
-- database layout,
-- RPC,
-- empty-account semantics,
-- transaction pool indexing,
-- block execution accounting,
-- consensus tests.
-
-The draft recommends an account-object subtrie for non-zero lanes. That is a plausible answer, but it must be specified down to encoding before clients can evaluate complexity. A "subtrie rooted at the account" is not enough by itself; we need to know how it is committed, how it interacts with the existing account RLP fields, and whether this waits for a broader state-tree transition.
-
-### VOPS / statelessness compatibility
-
-2D nonces are VOPS-relevant because VOPS baseline currently assumes one nonce per account. A sparse lane map means a VOPS node validating transaction gossip must know `state[sender].nonces[nonce_key]` for arbitrary keys.
-
-There are three possible strategies:
-
-1. **Keep all live nonce lanes in the VOPS slice.** This is simple for validation but may grow without bound unless lane creation is capped or priced high enough.
-2. **Keep only lane 0 in VOPS and require witnesses for non-zero lanes.** This preserves the baseline but makes every non-zero lane transaction carry witness data, which is bad for UX and mempool propagation.
-3. **Bound public-mempool lanes per account and include active lanes in an AA-VOPS extension.** This is probably the practical middle: consensus prices lane creation; mempool policy caps active pending lanes; VOPS nodes track lane records that have been created.
-
-The current draft gestures at option 3 but does not fully specify it. For FOCIL and VOPS, the key question is: can an attester validate a non-zero-lane tx using its validity slice without a full-state lookup? If the answer is "yes, active lane entries are part of VOPS", then the proposal needs a VOPS state-growth estimate. If the answer is "no, include a witness", then the restrictive-tier claim should be narrowed.
+Three strategies: all lanes in VOPS slice (unbounded without caps); only lane 0 in VOPS + witnesses for non-zero (bad for UX); bound public-mempool lanes + AA-VOPS extension (practical middle). Draft gestures at option 3 but doesn't fully specify. Key question: can an attester validate without a full-state lookup?
 
 ### FOCIL compatibility
 
-Mempool readiness per `(sender, nonce_key, nonce)` is FOCIL-compatible as long as inclusion-list validators can cheaply check the lane state. It also improves inclusion-list quality: independent lanes avoid one stuck transaction blocking all activity from the same account.
+Per-lane readiness is FOCIL-compatible if IL validators can cheaply check lane state. Independent lanes improve IL quality. Needs deterministic cross-client rules (RBF tuple, pending-cap, future-valid treatment, lane-allocation, block-invalidation) — implementable but needs cross-client txpool tests.
 
-The caveat is builder/attester complexity. FOCIL validation needs deterministic replacement and readiness rules across clients:
+### PQ compatibility
 
-- exact RBF tuple: `(sender, nonce_key, nonce)`,
-- exact pending cap semantics,
-- exact treatment of future-valid transactions on the same lane,
-- exact behavior if a transaction allocates a new lane,
-- exact invalidation after a block increments any lane.
-
-This is implementable, but it needs cross-client transaction-pool tests. 2D nonces are not just an execution-layer feature; they change mempool algorithms.
-
-### Post-quantum roadmap compatibility
-
-2D nonces are strongly aligned with the PQ roadmap. Ephemeral key rotation and one-time signer flows benefit from parallel streams because they reduce self-inflicted nonce contention. A wallet can reserve ranges for:
-
-- normal user actions,
-- ephemeral PQ signer rotation,
-- recovery/admin actions,
-- app/session flows,
-- encrypted-mempool submissions.
-
-However, 2D nonces do not themselves make accounts quantum-safe. They are a scheduling and replay primitive. The PQ benefit comes when account code or default code uses the stream key to constrain one-time keys and rotation policies.
+Aligned with roadmap. Parallel streams support ephemeral key rotation, one-time signer flows, session streams, recovery/admin isolation. 2D nonces don't make accounts quantum-safe; they're scheduling/replay primitives.
 
 ### Recommendation
 
-Keep the envelope-field design. Do not return to VERIFY-prefix encoding.
-
-Before proposing this for fork inclusion, write a state appendix that answers:
-
-1. Exact account encoding for non-zero lanes.
-2. Exact witness format for a non-zero lane read/write.
-3. Whether VOPS includes all created lanes, active lanes, or only lane 0.
-4. Gas accounting for first lane creation and lane increment.
-5. Whether non-zero lane state can ever be pruned.
-6. Consensus behavior for lane overflow.
-7. Cross-client txpool behavior for pending, queued, replacement, and eviction.
-
-My likely call: feasible, valuable, but should only ship if the state representation is agreed early. If that cannot be settled in time, validity windows should not be blocked on it.
+Keep envelope-field design. Before fork proposal, write a state appendix: exact account encoding; witness format; VOPS coverage; gas accounting for creation/increment; pruning; overflow; cross-client txpool behavior. Ship only if state representation is agreed early. Validity windows should not be blocked on it.
 
 ## Validity Windows
 
 ### Feasibility
 
-Validity windows are the cleanest of the three proposals. Adding `valid_after` and `valid_before` as signed envelope fields gives clients an objective pre-frame check:
+Cleanest of the three. Adding `valid_after` / `valid_before` as signed envelope fields gives clients an objective pre-frame check. No opcode, precompile, default-code branch, manager contract, extra state.
 
-```text
-if valid_after != 0:  block.timestamp > valid_after
-if valid_before != 0: block.timestamp < valid_before
-```
-
-No opcode, no precompile, no default-code branch, no manager contract, no extra state. This is the kind of primitive the transaction envelope is good at.
-
-The draft should tighten one encoding point: it says `valid_before == 0` is both "always expired" and "sentinel for no upper bound." Pick only one. I would define zero as no bound for both fields:
-
-```text
-valid_after = 0   means no lower bound
-valid_before = 0  means no upper bound
-```
-
-Then a reverse finite window (`valid_before != 0 && valid_after >= valid_before`) is invalid by consensus.
+Tighten one point: draft says `valid_before == 0` is both "always expired" and "no upper bound." Pick one. Define zero as no-bound for both; a reverse finite window (`valid_before != 0 && valid_after >= valid_before`) is consensus-invalid.
 
 ### VOPS / FOCIL compatibility
 
-Validity windows are VOPS-friendly. They require no state. They are FOCIL-friendly because inclusion-list validators can reject future or expired transactions from envelope data plus the slot timestamp.
+VOPS-friendly (no state). FOCIL-friendly — IL validators can reject future/expired txs from envelope data plus slot timestamp.
 
-The main policy work is txpool behavior:
+Main policy work is txpool behavior: deferral horizon, gossip, nonce position reservation, replacement before lower bound, expiry eviction. Policy, not consensus blockers.
 
-- how long nodes store future-valid transactions,
-- whether future-valid transactions are gossiped or only retained locally,
-- whether a future-valid tx occupies its nonce position,
-- how replacement works before the lower bound,
-- how aggressively expired transactions are evicted.
+### PQ compatibility
 
-Those are policy questions, not deep consensus blockers.
-
-### Post-quantum roadmap compatibility
-
-Validity windows help the PQ roadmap more than they may first appear. PQ migration involves larger signatures, possible aggregation, ephemeral keys, encrypted mempool flows, and time-sensitive reveal/order phases. Envelope-level validity lets nodes reason about these transactions without running validation code that reads `TIMESTAMP`, which would otherwise push them out of the restrictive tier.
-
-For encrypted mempools, there is one nuance: if the transaction body is sealed, public nodes may not see these fields unless the envelope has an unencrypted admission wrapper. That is an EIP-8184-style design question, not a reason to avoid validity windows in EIP-8141.
+Positive: envelope-level validity lets nodes reason about PQ/ephemeral flows without running validation code reading `TIMESTAMP`. Encrypted-mempool nuance: sealed tx bodies may need an unencrypted admission wrapper — EIP-8184-style design question, not a reason to avoid validity windows in 8141.
 
 ### Recommendation
 
-This is the best candidate for near-term inclusion. It is simple, improves UX, removes a known restrictive-mempool gap, and does not meaningfully worsen VOPS.
-
-I would standardize validity windows independently even if 2D nonces and permissions are deferred.
+Best near-term inclusion candidate. Simple, improves UX, removes a known restrictive-mempool gap, doesn't worsen VOPS. Standardize independently even if 2D nonces and permissions are deferred.
 
 ## Permissions
 
 ### Feasibility
 
-The revised permissions design is much stronger than the earlier draft because it admits the real primitive it needs:
+Revised design is much stronger because it admits the real primitive: `execution_authority: Optional[address]`. `tx.sender` signs + consumes tx nonce; a VERIFY frame targeting the delegator runs delegator code; if the manager authorizes, that code calls `APPROVE(execution)`; protocol sets `execution_authority = delegator`; SENDER frames execute with `msg.sender = execution_authority`.
 
-```text
-execution_authority: Optional[address]
-```
+Coherent — but also changes a core invariant. Current spec: SENDER executes from `tx.sender`. New rule: executes from `execution_authority ?? tx.sender`. Affects access lists, gas estimation, tracing, wallet simulation, block builders, security review.
 
-That makes delegated execution semantically possible:
-
-- `tx.sender` signs the transaction and consumes the tx-level nonce.
-- a VERIFY frame targeting the delegator runs delegator/default code.
-- if the manager authorizes the delegation, that code calls `APPROVE(execution)`.
-- the protocol sets `execution_authority = delegator`.
-- SENDER frames execute with `msg.sender = execution_authority`.
-
-This is coherent. It also changes a core invariant of EIP-8141. Current spec says SENDER frames execute from `tx.sender`; the new rule says they execute from `execution_authority ?? tx.sender`. That affects access lists, gas estimation, tracing, wallet simulation, block builders, and security review.
-
-The design also adds a canonical DelegationManager. If default code calls a reserved address and checks code hash, then the manager is part of the fork. That is acceptable only if the EIP owns that complexity directly:
-
-- address assignment,
-- bytecode,
-- deployment at fork activation,
-- immutability or fork-governed upgrades,
-- chain-specific deployment histories,
-- conformance tests,
-- behavior if the manager call fails.
-
-This starts to look like a system contract. Ethereum can do system contracts, but they require more discipline than "ecosystem convention."
+Canonical DelegationManager. If default code calls a reserved address and checks code hash, the manager is part of the fork. Acceptable only if the EIP owns that complexity: address assignment, bytecode, deployment at activation, immutability or upgrade rules, conformance tests, behavior if the manager call fails. Starts to look like a system contract — Ethereum can do system contracts, but they require discipline beyond "ecosystem convention."
 
 ### Restrictive mempool and guarantors
 
-The MVP restriction to one-hop, stateless caveats, execution-only approval is the right starting point. Without guarantors, I would only consider restrictive-tier propagation for caveats that inspect signed SENDER-frame content and read no shared state.
+v1 restriction to one-hop, stateless caveats, execution-only is the right start. Without guarantors, restrictive-tier propagation only for caveats that inspect signed SENDER-frame content and read no shared state.
 
-The guarantor section is promising but should be treated as a dependency, not a solved property. If guarantors land, they can convert shared-state caveats from "mempool cannot safely simulate this" into "a guarantor underwrites the risk." That may make richer permissions publicly propagatable.
-
-But if guarantors do not land, the permissions proposal should say plainly:
-
-- stateless caveats can be restrictive-tier,
-- shared-state caveats are expansive/private,
-- stateful quotas and spend counters are v2 or expansive/private,
-- manager-as-guarantor is unavailable.
-
-The permission system should not depend on an unsettled guarantor design for its base correctness.
+Guarantor section is promising but should be a dependency, not a solved property. If guarantors land, shared-state caveats become "underwritten" rather than "mempool can't simulate." If not, the permissions proposal should say plainly: stateless caveats restrictive-tier; shared-state caveats expansive/private; stateful quotas v2/private; manager-as-guarantor unavailable.
 
 ### VOPS compatibility
 
-Permissions are VOPS-sensitive in two different ways.
+Two axes. First: delegated execution touches at least two accounts (`tx.sender` for nonce/payment, `execution_authority` for execution). Fine during execution; validation must remain bounded for public propagation + FOCIL enforceability.
 
-First, delegated execution touches at least two accounts: `tx.sender` for nonce/payment validation and `execution_authority` for execution. That is fine during execution, but validation must remain bounded if the transaction is to propagate publicly and be FOCIL-enforceable.
+Second: manager validation can easily read shared state (revocation, delegation nonce, caveat contracts, allowlists, ERC-20 balances, oracles). Outside the `tx.sender` VOPS slice unless the canonical manager and its bounded storage are explicitly added to a VOPS extension. Proposal should define a v1 VOPS profile: delegator code, manager code, bounded manager storage for delegation nonce/revocation, signed SENDER-frame data, no arbitrary external caveat state unless guarantor-backed.
 
-Second, manager validation can easily read shared state:
-
-- revocation registry,
-- delegation nonce,
-- caveat contracts,
-- allowlists,
-- ERC-20 balances,
-- oracle contracts.
-
-Those reads are outside the `tx.sender` VOPS slice unless the canonical manager and its bounded storage are explicitly added to the VOPS extension. The proposal should define a VOPS profile for v1:
-
-```text
-Restrictive permissions v1 may read:
-- delegator account code/default code,
-- canonical manager code,
-- bounded manager storage for delegation nonce/revocation,
-- signed SENDER-frame data from tx context,
-- no arbitrary external caveat state unless a guarantor path is present.
-```
-
-If manager storage is part of the public validation path, VOPS nodes must carry it or receive witnesses. A global manager with large, hash-keyed revocation maps can become a VOPS pressure point similar to privacy-pool nullifier storage.
+A global manager with large hash-keyed revocation maps can become a VOPS pressure point similar to privacy-pool nullifier storage.
 
 ### FOCIL compatibility
 
-FOCIL attesters need to validate inclusion-list transactions cheaply and deterministically. Permissions complicate that because invalidation can happen outside the sender's nonce:
+Permissions complicate FOCIL because invalidation can happen outside the sender's nonce: delegation revoked; delegation nonce consumed; manager upgraded; caveat state changed; guarantor balance/commitment changed. For v1, specify invalidation rules.
 
-- delegation revoked,
-- delegation nonce consumed,
-- manager upgraded in a later fork,
-- caveat contract state changed,
-- guarantor balance or commitment changed.
+Safest v1: one-hop, execution-only, no payment delegation, no re-delegation, no arbitrary caveat calls in restrictive tier, bounded manager storage reads, no stateful spend counters in validation, settlement only after successful execution. Anything beyond → expansive-tier or guarantor-backed.
 
-For v1, the proposal should specify invalidation rules. A transaction admitted at time T may become invalid before inclusion if the manager's revocation state changes. That is not unique to permissions, but it is more common here than for simple signature validation.
+### PQ compatibility
 
-The safest FOCIL-compatible v1 is narrow:
+Conceptually aligned because `validateAuth(digest, proof)` is crypto-agnostic.
 
-- one-hop delegation,
-- execution-only,
-- no payment delegation,
-- no re-delegation,
-- no arbitrary caveat calls in restrictive tier,
-- bounded manager storage reads,
-- no stateful spend counters in validation,
-- settlement only after successful execution.
+Risk: long-lived authorization surface. ECDSA/P256-signed delegations remain quantum-vulnerable if valid far into the future. Delegation digests need expiry and scheme/domain metadata; wallets must revoke old classical delegations during PQ migration; manager shouldn't require `ecrecover` semantics; interface must handle large PQ proofs.
 
-Anything beyond that should be expansive-tier or guarantor-backed.
-
-### Post-quantum roadmap compatibility
-
-Permissions are conceptually aligned with the PQ roadmap because they avoid hardcoding ECDSA and use `validateAuth(digest, proof)` as a crypto-agnostic interface. That lets accounts authorize delegations with secp256k1 today, P256/passkeys, hybrid classical+PQ schemes, or pure PQ schemes later.
-
-However, permissions also introduce a long-lived authorization surface. That matters for quantum safety:
-
-- Delegation proofs signed with ECDSA or P256 remain quantum-vulnerable if they are valid far into the future.
-- Delegation digests should include expiry and ideally scheme/domain metadata.
-- Wallets should be able to revoke old classical delegations when migrating to PQ.
-- The manager should not require ERC-1271 or `ecrecover` semantics.
-- The manager interface must handle large PQ proofs without pushing common redemptions over validation gas caps.
-
-For the PQ roadmap, the best property of this design is `validateAuth`. The riskiest property is persistent delegation state signed under pre-PQ keys. The spec should require explicit expiry and revocation support in v1, even if stateful spend limits are deferred.
+v1 should require explicit expiry and revocation even if stateful spend limits are deferred.
 
 ### Recommendation
 
-Do not put permissions on the same critical path as core EIP-8141 unless the fork scope explicitly includes:
+Do not put permissions on the critical path for core EIP-8141 unless the fork scope explicitly includes all of: `execution_authority`; a consensus-coordinated immutable DelegationManager; a tx-context surface for signed SENDER frames; a post-op/finalization hook with revert semantics; a restrictive-tier permissions profile; a VOPS profile for manager state; a clear answer on whether guarantors are included or future work.
 
-1. `execution_authority`.
-2. A consensus-coordinated immutable DelegationManager.
-3. A tx-context surface for signed SENDER frames.
-4. A post-op/finalization hook with revert semantics.
-5. A restrictive-tier permissions profile.
-6. A VOPS profile for manager state.
-7. A clear answer on whether guarantors are included or future work.
-
-My preferred sequencing:
-
+Preferred sequencing:
 1. Ship base EIP-8141 with validity windows if possible.
 2. Ship 2D nonces once state encoding and VOPS treatment are settled.
-3. Treat delegated permissions as a follow-on EIP built on `execution_authority`, unless there is strong agreement that native permissions are required for the same fork.
+3. Treat delegated permissions as a follow-on EIP built on `execution_authority` unless strong agreement emerges that native permissions are required for the same fork.
 
-## Cross-Proposal Interactions
+## Cross-proposal interactions
 
-### Nonce ownership in delegated transactions
+### Nonce ownership in delegated txs
 
-The current answer is correct: the tx-level nonce belongs to `tx.sender`, even if `execution_authority` is someone else. Delegation replay protection belongs to the manager, not to the delegator's protocol nonce.
-
-That keeps the nonce model clean, but it means the manager's replay protection becomes consensus-adjacent for mempool validity. Clients need exact invalidation rules when manager state changes.
+Correct as currently designed: tx-level nonce belongs to `tx.sender` even if `execution_authority` is someone else. Delegation replay belongs to the manager, not to the delegator's protocol nonce. Clean nonce model — but manager's replay protection becomes consensus-adjacent for mempool validity. Clients need exact invalidation rules on manager-state changes.
 
 ### Validity windows and 2D nonces
 
-A future-valid transaction should reserve its sequence only on its own lane. It should not block other lanes. It should block later transactions on the same lane until included, replaced, dropped, or expired.
-
-This needs transaction-pool tests because it combines three dimensions:
-
-- lane readiness,
-- future-valid deferral,
-- replacement by fee.
+Future-valid tx should reserve its sequence only on its own lane; not block other lanes; block later txs on the same lane until included, replaced, dropped, or expired. Combines three dimensions — lane readiness, future-valid deferral, RBF — needs cross-client tests.
 
 ### Validity windows and permissions
 
-There are two time bounds:
-
-- delegation expiry in the manager digest,
-- transaction validity window in the envelope.
-
-Both are useful and should remain separate. The envelope window bounds a specific redemption attempt. The delegation expiry bounds the underlying authority.
-
-For PQ safety, wallets should prefer short transaction windows and short-lived classical delegations.
+Two time bounds: delegation expiry in the manager digest; tx validity window in the envelope. Both useful, keep separate. Envelope window bounds a specific redemption; delegation expiry bounds the underlying authority. For PQ safety, wallets should prefer short tx windows and short-lived classical delegations.
 
 ### Guarantors and 2D nonces
 
-The "nonce advances on inclusion regardless of VERIFY outcome" rule is correct. Guarantors make that explicit: if a guaranteed tx is included and sender validation fails, gas is paid by the guarantor and the sender stream still advances.
+The "nonce advances on inclusion regardless of VERIFY outcome" rule is correct. Guarantors make it explicit: included + sender validation fails + guarantor pays → stream still advances. Should be in the 2D-nonce spec, otherwise replay semantics around failed validation will be ambiguous.
 
-This should be in the 2D nonce spec. Otherwise replay semantics around failed validation will be ambiguous.
+## Compatibility with the broader roadmap
 
-## Compatibility With the Broader Roadmap
+### PQ
 
-### Post-Quantum
+- Validity windows positive: reduce need for timestamp-reading validation code, help short-lived encrypted/ephemeral flows.
+- 2D nonces positive: support ephemeral signers, session streams, recovery/admin isolation.
+- Permissions positive if `validateAuth` stays crypto-agnostic; risky if long-lived ECDSA/P256 delegations become common.
 
-- **Validity windows** are positive: they reduce the need for timestamp-reading validation code and help short-lived encrypted or ephemeral-key flows.
-- **2D nonces** are positive: they support ephemeral signers, session streams, and recovery/admin isolation.
-- **Permissions** are positive if `validateAuth` remains crypto-agnostic, but risky if long-lived ECDSA/P256 delegations become common.
-
-None of the three directly solves PQ security. They support the migration path. The hard PQ work remains precompiles/opcodes, ephemeral key rotation, encrypted propagation, and ECDSA revocation.
+None directly solve PQ security. They support the migration path.
 
 ### FOCIL
 
-- **Validity windows** are easy for FOCIL.
-- **2D nonces** are FOCIL-compatible if lane state is in the validity slice or witnessable cheaply.
-- **Permissions** are FOCIL-compatible only for a narrow bounded-validation profile, or with a finalized guarantor mechanism.
-
-The more permissions depend on shared manager/caveat state, the more they threaten the "attesters can cheaply validate inclusion lists" assumption.
+- Validity windows easy.
+- 2D nonces compatible if lane state is in the validity slice or witnessable cheaply.
+- Permissions compatible only for a narrow bounded-validation profile or with a finalized guarantor mechanism.
 
 ### VOPS
 
-- **Validity windows** add no state.
-- **2D nonces** add account state; the proposal needs a VOPS accounting model.
-- **Permissions** add validation state around manager storage and possibly caveat state; v1 must bound that or route through witnesses/guarantors/expansive tier.
+- Validity windows add no state.
+- 2D nonces add account state; need a VOPS accounting model.
+- Permissions add validation state around manager storage and possibly caveat state; v1 must bound or route through witnesses / guarantors / expansive tier.
 
-For VOPS, 2D nonces are a state-growth question; permissions are a validation-state-dependency question.
+### Expansive mempool
 
-### Expansive Mempool
+Treat as a release valve, not as proof that every feature is public-mempool-ready. Consensus validity ≠ FOCIL / censorship-resistance / wallet UX. Each proposal should label which flows are restrictive/public/FOCIL-compatible, restrictive with guarantor, expansive/private, direct-to-builder only.
 
-The expansive tier should be treated as a release valve, not as proof that every feature is public-mempool-ready. A transaction being consensus-valid is not enough for FOCIL, censorship resistance, or wallet UX. Each proposal should label which flows are:
-
-- restrictive/public/FOCIL-compatible,
-- restrictive only with guarantor,
-- expansive/private only,
-- direct-to-builder only.
-
-## Concrete Spec Questions Before Client Implementation
+## Concrete spec questions before client implementation
 
 ### 2D nonces
-
-1. What is the exact account encoding for non-zero nonce lanes?
+1. Exact account encoding for non-zero lanes?
 2. Are non-zero lanes part of the VOPS validity slice?
-3. What witness is required to validate a non-zero lane?
-4. What is `LANE_ALLOCATION_COST`, and does it differ before/after state-tree migration?
-5. Can lanes be pruned or reclaimed?
-6. What is the exact overflow behavior for `tx.nonce`?
-7. What are txpool caps and RBF rules for multi-lane accounts?
+3. Witness required for a non-zero lane?
+4. `LANE_ALLOCATION_COST`? Does it differ before/after state-tree migration?
+5. Can lanes be pruned?
+6. `tx.nonce` overflow behavior?
+7. Txpool caps and RBF rules for multi-lane accounts?
 
 ### Validity windows
-
 1. Is zero definitely "no bound" for both fields?
-2. Are the bounds strict or inclusive? The draft uses `>` for `valid_after` and `<` for `valid_before`; the names should match that.
-3. What is the max future deferral policy for public mempools?
+2. Strict or inclusive bounds?
+3. Max future deferral policy?
 4. Does a future-valid tx propagate or stay local until ready?
-5. How does replacement work while future-valid?
+5. Replacement while future-valid?
 
 ### Permissions
-
-1. Is `execution_authority` in the base EIP or a separate EIP?
+1. `execution_authority` in base EIP or separate EIP?
 2. Does `APPROVE(execution)` from any VERIFY target set `execution_authority = frame.target`?
-3. What exactly is the DelegationManager bytecode and address?
-4. What manager storage is allowed in restrictive validation?
-5. How does `consumeAndFinalize` run, and what happens if SENDER execution reverts?
-6. Are guarantors included in the same fork or not?
-7. What is the maximum delegation bundle size?
-8. What is the maximum caveat count?
-9. Are caveat contracts allowed in restrictive tier, or only manager-native caveat types?
+3. DelegationManager bytecode and address?
+4. Manager storage allowed in restrictive validation?
+5. How does `consumeAndFinalize` run, and what happens if SENDER reverts?
+6. Guarantors in the same fork or not?
+7. Max delegation bundle size?
+8. Max caveat count?
+9. Caveat contracts allowed in restrictive tier or only manager-native types?
 10. How are old classical delegations revoked during PQ migration?
 
-## Bottom Line
+## Bottom line
 
-The revisions did address the previous feedback on 2D nonces and permissions. The obvious correctness errors are gone.
+Revisions addressed previous feedback. Separate by maturity:
 
-From a core protocol perspective, I would separate the proposals by maturity:
+- **Validity windows**: ready as a small envelope-level addition.
+- **2D nonces**: feasible and valuable; blocked on state representation and VOPS accounting.
+- **Permissions**: semantically repaired but deserves its own EIP or clearly scoped sub-EIP. Not "merely default-code behavior" — changes execution authority, introduces a system-contract-like manager.
 
-- **Validity windows**: ready to pursue as a small envelope-level addition.
-- **2D nonces**: feasible and valuable, but blocked on exact state representation and VOPS accounting.
-- **Permissions**: semantically repaired, but large enough to deserve its own EIP or a clearly scoped sub-EIP. It should not be described as merely default-code behavior; it changes execution authority and introduces a system-contract-like manager.
-
-If the goal is compatibility with the post-quantum roadmap, FOCIL, and VOPS, the priority should be primitives that keep validation cheap, signed data explicit, and state growth bounded. Validity windows satisfy that now. 2D nonces can satisfy it with a precise state design. Permissions can satisfy it only in a narrow v1 profile, with richer caveats deferred to guarantors or the expansive tier.
+Priority for PQ/FOCIL/VOPS: primitives that keep validation cheap, signed data explicit, state growth bounded. Validity windows satisfy now. 2D nonces can with precise state design. Permissions only in a narrow v1 profile.
