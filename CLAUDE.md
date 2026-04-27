@@ -27,13 +27,15 @@ All working docs live in `docs/`. Flat layout; filenames are self-describing.
 
 | Category | Files |
 |---|---|
-| Feature proposals | `2d-nonces.md`, `validity-windows.md`, `permissions.md` |
+| Feature proposals | `2d-nonces.md`, `validity-windows.md`, `permissions.md`, `pubkey-hydration.md` |
 | Protocol primitives | `execution-authority.md`, `guarantors.md`, `sighash-binding.md` |
+| Background analysis | `pq-analysis.md` |
 | Decision docs | `research.md`, `plan.md`, `evaluation.md` |
 | Executive pitch | `summary.md` |
 
 **Feature proposals** describe user-facing capabilities with spec deltas.
 **Primitives** describe protocol building blocks that features depend on.
+**Background analysis** docs ground a specific proposal in implementation reality (e.g., reading reference-client source). They are referenced from the proposal they support but do not flow into the decision sequence.
 **Decision docs** derive to concrete action items, in this order: `research.md` (14-question deep dive and picks) → `plan.md` (sequencing + uncertainties + order of work) → `evaluation.md` (fork-scope scenario analysis) → `summary.md` (executive pitch).
 
 ---
@@ -98,7 +100,7 @@ This marks docs as iterative research output, not a publishable spec. When a doc
 |---|---|
 | `summary.md` | ≤ 300 words |
 | Feature proposals, primitive docs | ≤ 1 000 words |
-| `plan.md`, `research.md`, `evaluation.md` | ≤ 2 000 words |
+| Background analysis, `plan.md`, `research.md`, `evaluation.md` | ≤ 2 000 words |
 
 Keep proposals lean. If a doc exceeds its target, compress before adding new content.
 

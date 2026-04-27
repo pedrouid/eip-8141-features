@@ -42,10 +42,13 @@ docs/
 ├── 2d-nonces.md             # Feature: parallel nonce streams per account
 ├── validity-windows.md      # Feature: envelope-level time bounds on txs
 ├── permissions.md           # Feature: ERC-7710/7715-style delegated permissions (v2 fork)
+├── pubkey-hydration.md      # Feature: tx-scoped ECRECOVER hydration so PQ accounts work with immutable contracts
 │
 ├── guarantors.md            # Primitive: APPROVE(guarantee) and economic-risk mempool relaxation
 ├── execution-authority.md   # Primitive: tx-scoped execution authority for SENDER frames
-└── sighash-binding.md       # Primitive: binding rules for protocol-visible frame data
+├── sighash-binding.md       # Primitive: binding rules for protocol-visible frame data
+│
+└── pq-analysis.md           # Background analysis: ECRECOVER pipeline in reth and what PQ schemes can/can't do (grounding for pubkey-hydration)
 ```
 
 ---
