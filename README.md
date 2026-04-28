@@ -1,32 +1,54 @@
 # EIP-8141 Features
 
-Feature proposals, primitive definitions, and recommended fork-scope analysis for [EIP-8141](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-8141.md) (Frame Transaction) — the native account-abstraction proposal for Ethereum.
+Feature proposals, primitive definitions, and per-alternative analysis layered on top of [EIP-8141](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-8141.md) (Frame Transaction), the **native account-abstraction upgrade** for Ethereum.
 
-The work here originates from a research dive into how to extend EIP-8141 with additional primitives (2D nonces, validity windows, delegated permissions, guarantors) **without overwhelming core-dev review or breaking account encoding**. Each proposal has been iterated against core-dev and wallet-dev review pressure, then distilled into a recommended fork shape.
+Account abstraction already exists on Ethereum via ERC-4337 (above the protocol) and EIP-7702 (delegating to code). EIP-8141 lifts AA to the native protocol layer with a frame-based transaction model. The proposals in this repo expand the scope of that native AA upgrade in two phases. Each has been iterated against core dev and wallet dev review pressure.
+
+---
+
+## How to review this repo
+
+1. Read `README.md` for scope and the repository map.
+2. Read `docs/overview.md` for the alternative set and comparison table.
+3. Pick one Phase-1 alternative and read only its proposal doc.
+4. Read the appendix files referenced by that proposal.
+5. Read Phase 2 only if evaluating the later delegated-permissions path.
+
+Terminology used across the docs is defined once in `docs/glossary.md`.
 
 ---
 
 ## TL;DR
 
-Recommended shape for EIP-8141's first successful landing:
+The work is split into two phases on top of EIP-8141.
 
-- **Base AA fork**: EIP-8141 + guarantors + 2D nonces + validity windows.
-- **Follow-on v2 fork**: delegated permissions built on a standalone `execution-authority` EIP.
+### Phase 1 — Expanded native AA upgrade
 
-Net protocol surface of the base fork:
+**Phase 1 expands the scope of the existing EIP-8141 upgrade.** Ships in the same activation as EIP-8141, adding guarantors plus a chosen subset of three independent features:
 
-- **3 new envelope fields** (`nonce_key`, `valid_after`, `valid_before`).
-- **1 new system contract** (`NonceLaneRegistry`, EIP-4788 pattern).
-- **1 new APPROVE scope** (`APPROVE(guarantee)`).
-- **2 new tx-scoped fields** (`guarantor`; and `execution_authority` when the standalone EIP ships).
-- **Zero new opcodes.**
-- **Zero new precompiles.**
-- **Zero core-invariant changes.**
-- **Zero account-encoding changes.**
+- **2D nonces** — protocol-native parallel nonce streams.
+- **Signer binding** — registry-backed PQ identity for `ECRECOVER` callers.
+- **Validity windows** — envelope-level `valid_after` / `valid_before` time bounds.
 
-Every piece has independent design precedent. Any one can be pulled from the fork without invalidating the others.
+Phase 1 is presented as **five neutral alternatives**: three individual and two aggregated. No alternative is recommended; the choice is a tradeoff this repo does not take a position on.
 
-See [`docs/summary.md`](docs/summary.md) for the short pitch, [`docs/evaluation.md`](docs/evaluation.md) for the five-scenario analysis, and [`docs/plan.md`](docs/plan.md) for actionable proposal edits.
+| Alternative | Doc | Features bundled |
+|---|---|---|
+| 2D nonces | `docs/phase-1/2d-nonces.md` | 2D nonces |
+| Signer binding | `docs/phase-1/signer-binding.md` | Signer binding |
+| Validity windows | `docs/phase-1/validity-windows.md` | Validity windows |
+| Key lanes | `docs/phase-1/key-lanes.md` | 2D nonces + signer binding |
+| Authorization scopes | `docs/phase-1/authorization-scopes.md` | 2D nonces + signer binding + validity windows |
+
+Every alternative ships guarantors (PR #11555) as the small mempool primitive that confirms the stream-advance invariant and unlocks public-mempool ERC-20 paymasters.
+
+### Phase 2 — Delegated permissions (follow-on upgrade)
+
+ERC-7710/7715-style delegated permissions on top of a standalone `execution-authority` EIP. Ships only after a Phase-1 alternative has landed and stabilised.
+
+**Stretch:** Phase 1 is already a substantial upgrade. Bundling permissions on top is explicitly not recommended. See `docs/phase-2/permissions.md` for the prominent stretch warning and prerequisite list.
+
+See [`docs/overview.md`](docs/overview.md) for the phased pitch, per-alternative analysis, and open uncertainties.
 
 ---
 
@@ -34,51 +56,57 @@ See [`docs/summary.md`](docs/summary.md) for the short pitch, [`docs/evaluation.
 
 ```
 docs/
-├── summary.md               # Executive pitch for the recommended fork shape
-├── evaluation.md            # Scenario analysis (A/B/C/D/E fork combinations)
-├── plan.md                  # Sequencing, uncertainties, order of work
-├── research.md              # 14-question deep dive with picks
+├── overview.md             # Read first; covers scope, the five alternatives, and tradeoffs
+├── glossary.md             # Single canonical definition per term
 │
-├── 2d-nonces.md             # Feature: parallel nonce streams per account
-├── validity-windows.md      # Feature: envelope-level time bounds on txs
-├── permissions.md           # Feature: ERC-7710/7715-style delegated permissions (v2 fork)
-├── pubkey-hydration.md      # Feature: tx-scoped ECRECOVER hydration so PQ accounts work with immutable contracts
+├── phase-1/                # Phase-1 alternatives (pick one)
+│   ├── 2d-nonces.md            # Individual: 2D nonces
+│   ├── signer-binding.md       # Individual: registry-backed PQ identity
+│   ├── validity-windows.md     # Individual: envelope time bounds
+│   ├── key-lanes.md            # Aggregated: 2D nonces + signer binding
+│   └── authorization-scopes.md # Aggregated: 2D nonces + signer binding + validity windows
 │
-├── guarantors.md            # Primitive: APPROVE(guarantee) and economic-risk mempool relaxation
-├── execution-authority.md   # Primitive: tx-scoped execution authority for SENDER frames
-├── sighash-binding.md       # Primitive: binding rules for protocol-visible frame data
+├── phase-2/                # Phase-2 (follow-on upgrade)
+│   ├── permissions.md          # Delegated permissions (stretch warning)
+│   └── execution-authority.md  # Phase-2 prerequisite primitive
 │
-└── pq-analysis.md           # Background analysis: ECRECOVER pipeline in reth and what PQ schemes can/can't do (grounding for pubkey-hydration)
+└── appendix/               # Cross-cutting primitives, shared specs, and grounding analyses
+    ├── guarantors.md           # APPROVE(guarantee), in every Phase-1 alternative
+    ├── sighash-binding.md      # Class A/B binding analysis
+    ├── system-contracts.md     # NonceLaneRegistry + PubkeyRegistry: shared spec
+    ├── verified-signers.md     # Verified-signers table + modified ECRECOVER: shared spec
+    ├── mempool-tiers.md        # Restrictive / expansive / private tier semantics
+    └── pq-analysis.md          # NIST PQC + MAYO sizing; reth pipeline grounding
 ```
 
 ---
 
 ## Design principles
 
-Principles that every proposal in this repo follows. Deviations require explicit justification.
+Principles every proposal follows. Deviations require explicit justification.
 
 ### Consensus-level minimalism
 
 - No new opcodes.
 - No new precompiles.
-- No account-encoding changes — use the EIP-4788 / EIP-2935 system-contract pattern for new protocol-visible state.
-- No core-invariant changes in the base fork. Changes to SENDER-frame `msg.sender` semantics, fundamental APPROVE rules, or nonce consumption belong in follow-on forks.
+- No account-encoding changes; use the EIP-4788 / EIP-2935 system-contract pattern for new protocol-visible state.
+- No core-invariant changes in any Phase-1 alternative. Changes to SENDER-frame `msg.sender` semantics, fundamental APPROVE rules, or nonce consumption belong in Phase 2.
 
 ### First-class EIP-8141 primitives
 
 - Don't inherit from contract-era ERCs. ERC-4337 makes compromises (192-bit key packing, bundler enforcement, `isValidSignature` naming) because it lives above the protocol. EIP-8141 has the freedom to choose better shapes.
 - Crypto-agnostic and account-agnostic interfaces. Use `validateAuth(digest, proof)`, not ERC-1271. The interface should not privilege any signature scheme or account type.
+- Curve-specific data confined to `docs/appendix/pq-analysis.md`. Proposals stay scheme-agnostic so that adding ML-DSA today and MAYO-2 later doesn't require reopening the consensus spec.
 
 ### Binding and envelope discipline
 
-- Use envelope fields only where consensus must bind pre-frame. Stream keys, validity bounds — yes. Delegation bundles (bound by an independent account-signed digest) — no.
-- Prefer contract storage over account encoding for new state. System contracts at reserved addresses inherit existing machinery (snap sync, witnesses, state-tree transitions).
+- Use envelope fields only where consensus must bind pre-frame. Stream keys, validity bounds — yes. Inline PQ pubkeys — no (registry-only). Delegation bundles (Phase 2, bound by an independent account-signed digest) — no.
+- Prefer contract storage over account encoding for new state.
 
-### Scope and sequencing
+### Phasing
 
-- Small v1 scopes with explicit v2 deferrals. See permissions' v1/v2 split for the canonical example.
-- Core-dev feedback weighted higher than wallet-dev feedback. Core devs implement it and carry consensus risk; wallet devs can layer on top of what ships.
-- Features that can land in contracts + wallet code instead of consensus should. See the ~85 % permissions-UX-via-contracts argument in `docs/evaluation.md`.
+- Phase 1 lands one of five alternatives. Phase 2 is a follow-on upgrade. Bundling them is not recommended.
+- Phase-1 alternatives are presented neutrally. The repo doesn't pick.
 
 ---
 
@@ -87,7 +115,7 @@ Principles that every proposal in this repo follows. Deviations require explicit
 These are research documents, not a submitted EIP. They are intended as:
 
 1. Input to the ongoing EIP-8141 spec conversation.
-2. The basis for a companion EIP on the `execution-authority` primitive if the community path there proceeds.
-3. A reference for wallet and application developers planning for the AA-fork rollout.
+2. The basis for a companion EIP on the `execution-authority` primitive when Phase 2 proceeds.
+3. A reference for wallet and application developers planning for Phase-1 rollout.
 
 Pull requests, issues, and forked explorations are welcome.
