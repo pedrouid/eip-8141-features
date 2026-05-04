@@ -1,4 +1,4 @@
-# EIP-8141 Features, Project Instructions
+# EIP-8141 Upgrade, Project Instructions
 
 Instructions for AI agents and contributors working on this repository.
 

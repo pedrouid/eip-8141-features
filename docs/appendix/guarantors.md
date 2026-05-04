@@ -47,7 +47,7 @@ Independently of any other feature, guarantors enable:
 
 Small, confirming. Per-stream sequence is monotone on inclusion independent of VERIFY success. Mempool readiness unaffected; the guarantor commitment is additional validation, not a substitute for the nonce check. No spec changes to flexible nonces; the stream-advance rule is now a pinned normative invariant in any alternative that includes flexible nonces (`flexible-nonces.md`, `key-lanes.md`, `authorization-scopes.md`).
 
-The dependence runs both ways. A guarantor sponsoring many txs in parallel must advance a nonce per sponsorship for replay protection but cannot serialise every sponsorship through a single guarantor nonce without bottlenecking throughput. flexible nonces give each sponsorship its own stream, which is why broad guarantor adoption is more tractable when flexible nonces are also in scope. The combination is still being scoped; whether the two features ship in the same upgrade or flexible nonces precede via a separate EIP is an open coordination question.
+The dependence runs both ways. A guarantor sponsoring many txs in parallel must advance a nonce per sponsorship for replay protection but cannot serialise every sponsorship through a single guarantor nonce without bottlenecking throughput. Flexible nonces give each sponsorship its own stream, which is why broad guarantor adoption is more tractable when flexible nonces are also in scope. The combination is still being scoped; whether the two features ship in the same upgrade or flexible nonces precede via a separate EIP is an open coordination question.
 
 ## Interactions with other primitives
 

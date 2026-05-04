@@ -1,8 +1,8 @@
-# EIP-8141 Features
+# EIP-8141 Upgrade
 
-Feature proposals, primitive definitions, and per-alternative analysis layered on top of [EIP-8141](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-8141.md) (Frame Transaction), the **native account-abstraction upgrade** for Ethereum.
+A proposal to expand the scope of [EIP-8141](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-8141.md) (Frame Transaction), the **native account-abstraction upgrade** for Ethereum. Bundles guarantors and a chosen subset of three independent features into the same activation, on the basis that EIP-8141 is the one realistic opportunity to lift AA into the protocol layer.
 
-Account abstraction already exists on Ethereum via ERC-4337 (above the protocol) and EIP-7702 (delegating to code). EIP-8141 lifts AA to the native protocol layer with a frame-based transaction model. The proposals in this repo expand the scope of that native AA upgrade. Each has been iterated against core dev and wallet dev review pressure.
+Account abstraction already exists on Ethereum via ERC-4337 (above the protocol) and EIP-7702 (delegating to code). EIP-8141 lifts AA to the native protocol layer with a frame-based transaction model. This repo argues that the upgrade should land doing more than the minimum, since there will not be a second pass; the proposals expand its scope and have been iterated against core dev and wallet dev review pressure.
 
 ---
 
