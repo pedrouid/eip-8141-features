@@ -2,16 +2,16 @@
 
 ```
 Canonical for:  NonceLaneRegistry, PubkeyRegistry
-Referenced by:  P1.N, P1.S, P1.NS, P1.NSW; P2 (DelegationManager pattern)
+Referenced by:  N, S, NS, NSW
 ```
 
-_Canonical specs for the two system contracts introduced by Phase-1 alternatives. Single source of truth referenced by [`phase-1/2d-nonces.md`](../phase-1/2d-nonces.md), [`phase-1/signer-binding.md`](../phase-1/signer-binding.md), [`phase-1/key-lanes.md`](../phase-1/key-lanes.md), and [`phase-1/authorization-scopes.md`](../phase-1/authorization-scopes.md)._
+_Canonical specs for the two system contracts introduced by the alternatives. Single source of truth referenced by [`proposals/flexible-nonces.md`](../proposals/flexible-nonces.md), [`proposals/signer-binding.md`](../proposals/signer-binding.md), [`proposals/key-lanes.md`](../proposals/key-lanes.md), and [`proposals/authorization-scopes.md`](../proposals/authorization-scopes.md)._
 
 Both contracts follow the EIP-4788 / EIP-2935 system-contract pattern: deployed at upgrade-coordinated reserved addresses, immutable, address + expected code-hash pinned by consensus.
 
 ## 1. NonceLaneRegistry
 
-Holds per-account per-key 64-bit sequence numbers backing 2D nonces. Used by [`phase-1/2d-nonces.md`](../phase-1/2d-nonces.md), [`phase-1/key-lanes.md`](../phase-1/key-lanes.md), [`phase-1/authorization-scopes.md`](../phase-1/authorization-scopes.md).
+Holds per-account per-key 64-bit sequence numbers backing flexible nonces. Used by [`proposals/flexible-nonces.md`](../proposals/flexible-nonces.md), [`proposals/key-lanes.md`](../proposals/key-lanes.md), [`proposals/authorization-scopes.md`](../proposals/authorization-scopes.md).
 
 ```solidity
 contract NonceLaneRegistry {
@@ -42,7 +42,7 @@ First-use cost of a non-zero lane is SSTORE-from-zero (20 000 gas with EIP-2929 
 
 ## 2. PubkeyRegistry
 
-Holds per-account `(scheme_id, pubkey_bytes)` for PQ accounts. Used by [`phase-1/signer-binding.md`](../phase-1/signer-binding.md), [`phase-1/key-lanes.md`](../phase-1/key-lanes.md), [`phase-1/authorization-scopes.md`](../phase-1/authorization-scopes.md). The verified-signers table that consumes this state is specified in [`appendix/verified-signers.md`](verified-signers.md).
+Holds per-account `(scheme_id, pubkey_bytes)` for PQ accounts. Used by [`proposals/signer-binding.md`](../proposals/signer-binding.md), [`proposals/key-lanes.md`](../proposals/key-lanes.md), [`proposals/authorization-scopes.md`](../proposals/authorization-scopes.md). The verified-signers table that consumes this state is specified in [`appendix/verified-signers.md`](verified-signers.md).
 
 ```solidity
 contract PubkeyRegistry {
@@ -61,7 +61,7 @@ contract PubkeyRegistry {
 
 Registration is SSTORE-from-zero plus pubkey calldata. Clearing is SSTORE-to-zero. Accounts self-register via an EIP-8141 SENDER frame; the protocol does not auto-register.
 
-Inline envelope pubkeys are explicitly rejected: PQ pubkey sizes (kilobytes for most schemes) make per-tx envelope inlining impractical. Registry-only keeps the envelope shape stable and avoids a second binding/sighash conversation. See [`appendix/pq-analysis.md`](pq-analysis.md) for size data.
+Inline envelope pubkeys are explicitly rejected. For lattice and multivariate schemes, kilobyte-scale pubkeys make per-tx inlining impractical. For hash-based (SLH-DSA: 32-64 B) the size case doesn't hold, but supporting both pubkey-by-reference and pubkey-by-value forks the protocol into two binding chains for one logical capability. Registry-only is uniform across families and avoids a second binding/sighash conversation. See [`appendix/pq-analysis.md`](pq-analysis.md).
 
 ## 3. Common deployment model
 
@@ -74,9 +74,9 @@ Both contracts share:
 
 ## 4. Why system contracts and not account-encoding fields
 
-An earlier 2D-nonces draft proposed adding a `lanesRoot` field to the account RLP encoding (the account 4-tuple: `nonce, balance, storageRoot, codeHash`). Rejected: changing account encoding ripples through every RLP parser, every state-root computation, EIP-161, archive-node decoding, and witness format. The system-contract pattern keeps the change at the storage layer where existing machinery already covers it: snap sync, witnesses, state-tree transitions, archive decoding all work without bespoke code paths.
+An earlier flexible-nonces draft proposed adding a `lanesRoot` field to the account RLP encoding (the account 4-tuple: `nonce, balance, storageRoot, codeHash`). Rejected: changing account encoding ripples through every RLP parser, every state-root computation, EIP-161, archive-node decoding, and witness format. The system-contract pattern keeps the change at the storage layer where existing machinery already covers it: snap sync, witnesses, state-tree transitions, archive decoding all work without bespoke code paths.
 
-By extension, PubkeyRegistry uses the same pattern. Storing a per-account PQ pubkey on the account record itself was never seriously considered for the same reasons, plus the size problem (PQ pubkeys are kilobytes; the account RLP would balloon).
+By extension, PubkeyRegistry uses the same pattern. Storing a per-account PQ pubkey on the account record itself was never seriously considered for the same reasons, with the additional size problem for lattice and multivariate schemes (kilobyte-scale pubkeys would balloon the account RLP).
 
 ## 5. VOPS profile
 
@@ -104,9 +104,9 @@ Error codes are listed per-proposal where they apply.
 
 ## 8. Spec delta summary
 
-Per Phase-1 alternative that includes the relevant feature(s):
+Per alternative that includes the relevant feature(s):
 
-- Deploy `NonceLaneRegistry` (if 2D nonces): reserved address, immutable, code-hash pinned.
+- Deploy `NonceLaneRegistry` (if flexible nonces): reserved address, immutable, code-hash pinned.
 - Deploy `PubkeyRegistry` (if signer binding): reserved address, immutable, code-hash pinned.
 - Pre-tx rule: non-zero `nonce_key` system-calls `NonceLaneRegistry.check` + `advance`; key 0 retains the legacy account-nonce path.
 - VERIFY frames resolve PQ pubkeys via `PubkeyRegistry.get(frame.target)` during signer binding (semantics in [`appendix/verified-signers.md`](verified-signers.md)).

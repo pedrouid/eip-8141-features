@@ -2,8 +2,7 @@
 
 ```
 Status:             research draft
-Phase:              1
-Alternative ID:     P1.NS
+Alternative ID:     NS
 Depends on:         EIP-8141 + guarantors
 Introduces:         nonce_key envelope field, NonceLaneRegistry, PubkeyRegistry,
                     verified-signers table, modified ECRECOVER
@@ -13,7 +12,7 @@ Shared appendices:  system-contracts, verified-signers, mempool-tiers,
 
 ## 1. Status and scope
 
-Phase-1 alternative (aggregated). Lands 2D nonces (P1.N) and signer binding (P1.S) in one upgrade. This doc is the merged spec; sections labelled **Inherited from §X** restate component content for completeness, sections labelled **New** cover the cross-feature analysis. Constraints respected (no new opcodes, precompiles, frame modes, account-encoding changes, sighash changes) are listed in [`docs/overview.md`](../overview.md). Identified as the middle ground in [`docs/priorities.md`](../priorities.md).
+Aggregated alternative. Lands flexible nonces (N) and signer binding (S) in one upgrade. This doc is the merged spec; sections labelled **Inherited from §X** restate component content for completeness, sections labelled **New** cover the cross-feature analysis. Constraints respected (no new opcodes, precompiles, frame modes, account-encoding changes, sighash changes) are listed in [`docs/overview.md`](../overview.md). Identified as the middle ground in [`docs/priorities.md`](../priorities.md).
 
 ## 2. Motivation
 
@@ -41,7 +40,7 @@ Add envelope field `nonce_key: uint256` (default 0). Deploy two immutable system
 
 ## 5. Normative spec
 
-### Envelope (Inherited from §5 of `2d-nonces.md`)
+### Envelope (Inherited from §5 of `flexible-nonces.md`)
 
 ```
 [chain_id, nonce_key, nonce, sender, frames, fees..., blob_versioned_hashes]
@@ -71,7 +70,7 @@ clear tx.verified_signers
 
 Signer binding runs during VERIFY-frame execution, not pre-tx.
 
-### Stream invariants (Inherited from `2d-nonces.md` §5; MUST)
+### Stream invariants (Inherited from `flexible-nonces.md` §5; MUST)
 
 Stream-advance-on-inclusion (cited from [`appendix/guarantors.md`](../appendix/guarantors.md)); `2^64 - 1` overflow rule; contract-creation address derivation uses legacy `nonce` only; sponsor signatures bind `(sender, nonce_key, tx.nonce)`.
 
@@ -121,7 +120,7 @@ Wallet UX:
 
 ## 8. Security and DoS analysis
 
-Per-feature analyses in [`phase-1/2d-nonces.md`](2d-nonces.md) §8 and [`phase-1/signer-binding.md`](signer-binding.md) §8 carry over. **New** cross-feature considerations:
+Per-feature analyses in [`flexible-nonces.md`](flexible-nonces.md) §8 and [`signer-binding.md`](signer-binding.md) §8 carry over. **New** cross-feature considerations:
 
 - **Cross-feature DoS budget.** A single tx can both touch a non-zero lane (1 SSTORE on `NonceLaneRegistry` for first-use, otherwise 1 slot read) and emit up to 8 signer bindings (1 slot read on `PubkeyRegistry` each). Restrictive-tier admission still admits both flows; the 100 000 validation-prefix budget covers them.
 - **First-use cost stacking.** A new account's first usage may pay first-use SSTORE on both registries. Wallet UX should warn once per registry on first onboarding.
@@ -129,9 +128,9 @@ Per-feature analyses in [`phase-1/2d-nonces.md`](2d-nonces.md) §8 and [`phase-1
 
 ## 9. Compatibility and interactions
 
-- **Validity windows** (if also adopted, e.g., as P1.NSW): orthogonal. Future-valid tx holds its stream position until lands or expires; the verified-signers table is rebuilt per-tx.
+- **Validity windows** (if also adopted, e.g., as NSW): orthogonal. Future-valid tx holds its stream position until lands or expires; the verified-signers table is rebuilt per-tx.
 - **Guarantors:** confirms stream-advance invariant; orthogonal to signer binding.
-- **Sighash binding:** 2D-nonce key bound by envelope placement (Class A); binding digests sit in elided VERIFY data, integrity covered by signature-over-pubkey check (Class B). See [`appendix/sighash-binding.md`](../appendix/sighash-binding.md).
+- **Sighash binding:** flexible-nonce key bound by envelope placement (Class A); binding digests sit in elided VERIFY data, integrity covered by signature-over-pubkey check (Class B). See [`appendix/sighash-binding.md`](../appendix/sighash-binding.md).
 - **vs. shipping each individually across upgrades:** same protocol surface, one upgrade's review effort, shared system-contract precedent, shared mempool reasoning.
 - **vs. ERC-4337:** 4337 packs key+seq into one `uint256` because it lives above the protocol; key-lanes uses two envelope fields. ERC-4337 has no analogue to signer binding.
 

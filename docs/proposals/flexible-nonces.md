@@ -1,9 +1,10 @@
-# 2D Nonces for EIP-8141
+# Flexible Nonces for EIP-8141
+
+_Also referred to as **flexible nonces**._
 
 ```
 Status:             research draft
-Phase:              1
-Alternative ID:     P1.N
+Alternative ID:     N
 Depends on:         EIP-8141 + guarantors
 Introduces:         nonce_key envelope field, NonceLaneRegistry
 Shared appendices:  system-contracts, mempool-tiers, sighash-binding, guarantors
@@ -11,11 +12,21 @@ Shared appendices:  system-contracts, mempool-tiers, sighash-binding, guarantors
 
 ## 1. Status and scope
 
-Phase-1 alternative (individual). Adds protocol-native parallel nonce streams per account. Consensus surface is one envelope field plus one immutable system contract; constraints respected (no new opcodes, precompiles, frame modes, account-encoding changes, sighash changes) are listed in [`docs/overview.md`](../overview.md).
+Individual alternative. Adds protocol-native parallel nonce streams per account. Consensus surface is one envelope field plus one immutable system contract; constraints respected (no new opcodes, precompiles, frame modes, account-encoding changes, sighash changes) are listed in [`docs/overview.md`](../overview.md).
 
 ## 2. Motivation
 
-Today, a single stuck low-fee tx blocks every later tx from the same EOA. The workaround is to deploy a smart account or maintain multiple addresses. 2D nonces let one account run independent sequences in parallel, so a stuck app-key tx does not block a recovery tx, a payroll tx does not block a swap, and so on.
+Several use cases share a common shape: a single account-wide nonce forces unrelated work to serialise. A stuck or failed tx blocks every later tx; parallel actions queue behind each other; the workaround today is to deploy a smart account or maintain multiple addresses. flexible nonces let one account run independent sequences in parallel.
+
+**Multi-step workflows.** High-frequency trading bots, market makers, and mass-payout systems (payroll, airdrops, grants) submit many txs in parallel. With one nonce stream, a single stuck or failed tx halts the rest; operators today run sharded addresses or accept the bottleneck. flexible nonces let each workflow run on its own lane.
+
+**Privacy pools.** Once EIP-8141 lets contracts originate transactions, a privacy pool (Tornado-style, Aztec-style) becomes a sender in its own right: any member can redeem via the pool. A single account-wide nonce serialises every redemption, forcing members to coordinate ordering. The natural ordering primitive is already the nullifier (one-time-redeemable); flexible nonces let each nullifier-derived key index its own stream. Mostly relevant to native (contract) accounts, not EOAs, but load-bearing once contracts can originate.
+
+**Guarantors for ERC-20 repayment.** A guarantor sponsoring many ERC-20-paid txs in parallel must advance a nonce per sponsorship for replay protection but cannot serialise every sponsorship through one guarantor nonce without bottlenecking throughput. flexible nonces give each sponsorship its own stream. The two features compose: flexible nonces make broad guarantor adoption tractable, and guarantors confirm the stream-advance-on-inclusion invariant flexible nonces rely on (see [`appendix/guarantors.md`](../appendix/guarantors.md)).
+
+**Multi-sigs.** A multi-sig with several active signers or several open proposals serialises every action through one nonce, forcing off-chain coordination on ordering. flexible nonces let each signer or each proposal hold its own stream so independent actions don't queue behind each other.
+
+**Alternative signature schemes.** Accounts that mix schemes (a secp256k1 hot key and a PQ cold key, or an enterprise multi-key setup) gain natural per-key streams. A stuck tx on one scheme doesn't block the others, and the wallet's key-selection model maps directly onto `nonce_key`.
 
 ## 3. Priorities and non-goals
 

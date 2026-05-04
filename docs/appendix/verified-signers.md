@@ -2,10 +2,10 @@
 
 ```
 Canonical for:  verified-signers table, modified ECRECOVER (hit-path-first lookup)
-Referenced by:  P1.S, P1.NS, P1.NSW
+Referenced by:  S, NS, NSW
 ```
 
-_Canonical specification of the tx-scoped verified-signers table and the modified `ECRECOVER` semantics that back **signer binding**. Single source of truth referenced by [`phase-1/signer-binding.md`](../phase-1/signer-binding.md), [`phase-1/key-lanes.md`](../phase-1/key-lanes.md), and [`phase-1/authorization-scopes.md`](../phase-1/authorization-scopes.md). Background and registry state in [`appendix/system-contracts.md`](system-contracts.md) and [`appendix/pq-analysis.md`](pq-analysis.md)._
+_Canonical specification of the tx-scoped verified-signers table and the modified `ECRECOVER` semantics that back **signer binding**. Single source of truth referenced by [`signer-binding.md`](../proposals/signer-binding.md), [`key-lanes.md`](../proposals/key-lanes.md), and [`authorization-scopes.md`](../proposals/authorization-scopes.md). Background and registry state in [`appendix/system-contracts.md`](system-contracts.md) and [`appendix/pq-analysis.md`](pq-analysis.md)._
 
 ## Why signer binding exists
 

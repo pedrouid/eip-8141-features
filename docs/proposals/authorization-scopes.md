@@ -2,8 +2,7 @@
 
 ```
 Status:             research draft
-Phase:              1
-Alternative ID:     P1.NSW
+Alternative ID:     NSW
 Depends on:         EIP-8141 + guarantors
 Introduces:         nonce_key, valid_after, valid_before envelope fields;
                     NonceLaneRegistry, PubkeyRegistry; verified-signers table;
@@ -14,7 +13,7 @@ Shared appendices:  system-contracts, verified-signers, mempool-tiers,
 
 ## 1. Status and scope
 
-Phase-1 alternative (aggregated). All three Phase-1 features in one upgrade: 2D nonces (P1.N) + signer binding (P1.S) + validity windows (P1.W). This doc is the merged spec; sections labelled **Inherited from §X** restate component content, sections labelled **New** cover the cross-feature analysis. Constraints respected (no new opcodes, precompiles, frame modes, account-encoding changes, sighash changes) are listed in [`docs/overview.md`](../overview.md). Identified as the maximum viable bundle in [`docs/priorities.md`](../priorities.md).
+Aggregated alternative. All three features in one upgrade: flexible nonces (N) + signer binding (S) + validity windows (W). This doc is the merged spec; sections labelled **Inherited from §X** restate component content, sections labelled **New** cover the cross-feature analysis. Constraints respected (no new opcodes, precompiles, frame modes, account-encoding changes, sighash changes) are listed in [`docs/overview.md`](../overview.md). Identified as the maximum viable bundle in [`docs/priorities.md`](../priorities.md).
 
 ## 2. Motivation
 
@@ -117,10 +116,10 @@ Error codes:
 
 | Code | Name |
 |---|---|
-| -32010..-32013 | Validity-window codes (see [`phase-1/validity-windows.md`](validity-windows.md) §7) |
+| -32010..-32013 | Validity-window codes (see [`validity-windows.md`](validity-windows.md) §7) |
 | -32014 | `lane_not_found` |
 | -32015 | `too_many_active_streams` |
-| -32016..-32018 | Pubkey-side codes (see [`phase-1/signer-binding.md`](signer-binding.md) §7) |
+| -32016..-32018 | Pubkey-side codes (see [`signer-binding.md`](signer-binding.md) §7) |
 | -32019 | `signer_binding_cap_exceeded` |
 
 Wallet UX:
@@ -145,7 +144,7 @@ Per-feature analyses in components apply. **New** cross-feature considerations:
 - **Sighash binding:** lane key and window bounds bound by envelope placement (Class A); binding digests sit in elided VERIFY data, integrity from signature-over-pubkey check (Class B). See [`appendix/sighash-binding.md`](../appendix/sighash-binding.md).
 - **vs. shipping each individually across upgrades:** same protocol surface, one upgrade's review effort, shared system-contract precedent, shared mempool-tier reasoning.
 - **vs. `key-lanes.md`:** adds validity windows. Cheap addition (envelope-only, no state, no contracts), large user-safety upside.
-- **vs. ERC-4337:** 4337 has analogues for 2D nonces and validity windows but only for smart accounts via bundlers; no analogue for signer binding.
+- **vs. ERC-4337:** 4337 has analogues for flexible nonces and validity windows but only for smart accounts via bundlers; no analogue for signer binding.
 
 ## 10. Open questions
 

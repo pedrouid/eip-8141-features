@@ -8,7 +8,7 @@ _Single canonical definition per term used in this repo. Each entry tagged `(EIP
 
 **VERIFY frame** _(EIP-8141 base)_. A frame that runs an account's default code in a validation phase. Calls to `APPROVE` from a VERIFY frame set tx-scoped state (e.g., `payer_approved`, `guarantor`).
 
-**SENDER frame** _(EIP-8141 base)_. A frame that executes user-intended action. `msg.sender` defaults to `tx.sender` (and to `execution_authority` if set, in Phase 2).
+**SENDER frame** _(EIP-8141 base)_. A frame that executes user-intended action. `msg.sender` defaults to `tx.sender`.
 
 **Default code** _(EIP-8141 base)_. The protocol-supplied bytecode that runs in a VERIFY frame for an EOA that has not delegated to custom code. Default code is where standard tx authentication lives.
 
@@ -16,9 +16,9 @@ _Single canonical definition per term used in this repo. Each entry tagged `(EIP
 
 **sighash** _(EIP-8141 base)_. The hash signed by the tx-level signature, computed by `compute_sig_hash`. VERIFY-frame `data` is elided; SENDER frames are not. See [`appendix/sighash-binding.md`](appendix/sighash-binding.md).
 
-## Phase-1 primitives
+## Primitives
 
-**2D nonces** _(introduced here)_. Per-account parallel nonce streams keyed by `nonce_key`. Spec: [`phase-1/2d-nonces.md`](phase-1/2d-nonces.md).
+**Flexible nonces** _(introduced here; aka **2D nonces**)_. Per-account parallel nonce streams keyed by `nonce_key`. Spec: [`proposals/flexible-nonces.md`](proposals/flexible-nonces.md).
 
 **`nonce_key`** _(introduced here)_. Envelope field, `uint256`, default 0. Selects the nonce stream a tx sequences against. Key 0 is the legacy account-nonce path.
 
@@ -26,13 +26,13 @@ _Single canonical definition per term used in this repo. Each entry tagged `(EIP
 
 **`NonceLaneRegistry`** _(introduced here)_. Immutable system contract holding per-account per-key 64-bit sequence numbers. Spec: [`appendix/system-contracts.md`](appendix/system-contracts.md).
 
-**Validity windows** _(introduced here)_. Envelope-level time bounds via `valid_after` / `valid_before`. Spec: [`phase-1/validity-windows.md`](phase-1/validity-windows.md).
+**Validity windows** _(introduced here)_. Envelope-level time bounds via `valid_after` / `valid_before`. Spec: [`proposals/validity-windows.md`](proposals/validity-windows.md).
 
 **`valid_after` / `valid_before`** _(introduced here)_. Envelope fields, `uint64`, unix seconds; 0 = no bound. A tx is consensus-invalid if its inclusion timestamp falls outside the window.
 
-**Signer binding** _(introduced here)_. Tx-scoped mechanism letting a PQ VERIFY frame bind `(digest, address)` claims that `ECRECOVER` resolves on subsequent calls within the same tx. Spec: [`phase-1/signer-binding.md`](phase-1/signer-binding.md).
+**Signer binding** _(introduced here)_. Tx-scoped mechanism letting a PQ VERIFY frame bind `(digest, address)` claims that `ECRECOVER` resolves on subsequent calls within the same tx. Spec: [`proposals/signer-binding.md`](proposals/signer-binding.md).
 
-**Pubkey hydration** _(deprecated; renamed)_. Old name for **signer binding**. The rename happened during research; treat any external reference to "pubkey hydration" as referring to the spec in [`phase-1/signer-binding.md`](phase-1/signer-binding.md).
+**Pubkey hydration** _(deprecated; renamed)_. Old name for **signer binding**. The rename happened during research; treat any external reference to "pubkey hydration" as referring to the spec in [`proposals/signer-binding.md`](proposals/signer-binding.md).
 
 **Verified-signers table** _(introduced here)_. The tx-scoped `set[(digest32, address)]` populated by binding VERIFY frames and queried by `ECRECOVER`. Spec: [`appendix/verified-signers.md`](appendix/verified-signers.md).
 
@@ -54,20 +54,10 @@ Reference: [`appendix/mempool-tiers.md`](appendix/mempool-tiers.md).
 
 **Class A binding**. Protocol-visible data whose validity depends only on the tx (e.g., `nonce_key`, `valid_after`). MUST be covered by the tx sighash; lives in the envelope.
 
-**Class B binding**. Protocol-visible data whose validity depends on an independent account-side signature (e.g., a Phase-2 delegation bundle). Does not require tx-sighash coverage.
+**Class B binding**. Protocol-visible data whose validity depends on an independent signature chain (e.g., signer-binding claims verified under a registered PQ pubkey). Does not require tx-sighash coverage.
 
 Reference: [`appendix/sighash-binding.md`](appendix/sighash-binding.md).
 
-## Phase-2 vocabulary
-
-**`execution_authority`** _(introduced for Phase 2)_. Tx-scoped state that, when set, makes SENDER frames execute with `msg.sender = execution_authority` instead of `tx.sender`. Spec: [`phase-2/execution-authority.md`](phase-2/execution-authority.md).
-
-**`DelegationManager`** _(introduced for Phase 2)_. Immutable system contract verifying delegation bundles and emitting authoritative revocation events. Spec: [`phase-2/permissions.md`](phase-2/permissions.md).
-
-**`validateAuth(digest, proof)`** _(introduced for Phase 2)_. Account-side authorization primitive. Crypto-agnostic and account-agnostic; replaces ERC-1271 in this repo's vocabulary.
-
 ## Repo conventions
 
-**Phase 1 / Phase 2**. Phase 1 lands one of five alternatives plus guarantors. Phase 2 is a follow-on upgrade for delegated permissions. See [`docs/overview.md`](overview.md).
-
-**Alternative ID**. `P1.N` (2D nonces), `P1.S` (signer binding), `P1.W` (validity windows), `P1.NS` (key lanes), `P1.NSW` (authorization scopes).
+**Alternative ID**. `N` (flexible nonces), `S` (signer binding), `W` (validity windows), `NS` (key lanes), `NSW` (authorization scopes). See [`overview.md`](overview.md).

@@ -2,8 +2,7 @@
 
 ```
 Status:             research draft
-Phase:              1
-Alternative ID:     P1.W
+Alternative ID:     W
 Depends on:         EIP-8141 + guarantors
 Introduces:         valid_after envelope field, valid_before envelope field
 Shared appendices:  mempool-tiers, sighash-binding
@@ -11,7 +10,7 @@ Shared appendices:  mempool-tiers, sighash-binding
 
 ## 1. Status and scope
 
-Phase-1 alternative (individual). Adds protocol-level validity-window support so time-bounded transactions propagate through the public (restrictive) mempool instead of expansive or private tiers. Constraints respected (no new opcodes, precompiles, frame modes, system contracts, account-encoding changes, sighash changes) are listed in [`docs/overview.md`](../overview.md).
+Individual alternative. Adds protocol-level validity-window support so time-bounded transactions propagate through the public (restrictive) mempool instead of expansive or private tiers. Constraints respected (no new opcodes, precompiles, frame modes, system contracts, account-encoding changes, sighash changes) are listed in [`docs/overview.md`](../overview.md).
 
 ## 2. Motivation
 
@@ -109,7 +108,7 @@ Wallet display (non-normative):
 
 - **Sighash binding:** resolved by envelope placement (Class A; see [`appendix/sighash-binding.md`](../appendix/sighash-binding.md)).
 - **Guarantors:** if a tx expires between admission and inclusion, mempool drops it; guarantor doesn't pay for non-includable txs.
-- **2D nonces:** orthogonal. A future-valid tx holds its stream position until it lands or expires; doesn't block other streams.
+- **flexible nonces:** orthogonal. A future-valid tx holds its stream position until it lands or expires; doesn't block other streams.
 - **Signer binding:** orthogonal. Window enforcement runs before any frame; the verified-signers table is rebuilt per-tx.
 - **vs. Tempo:** same shape, same reasoning. Both native designs converge on envelope-level validity.
 - **vs. ERC-4337:** 4337's `validUntil`/`validAfter` live in UserOperation payload, enforced by bundlers. Protocol nodes have no view. This proposal moves the primitive down into the protocol.

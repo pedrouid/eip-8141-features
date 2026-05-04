@@ -2,8 +2,7 @@
 
 ```
 Status:             research draft
-Phase:              1
-Alternative ID:     P1.S
+Alternative ID:     S
 Depends on:         EIP-8141 + guarantors
 Introduces:         PubkeyRegistry, verified-signers table, modified ECRECOVER
 Shared appendices:  system-contracts, verified-signers, mempool-tiers, sighash-binding, pq-analysis
@@ -11,7 +10,7 @@ Shared appendices:  system-contracts, verified-signers, mempool-tiers, sighash-b
 
 ## 1. Status and scope
 
-Phase-1 alternative (individual). Adds a tx-scoped mechanism that lets PQ accounts be recognized by immutable contracts that call `ECRECOVER` on application digests. The secp256k1 path is byte-for-byte unchanged. Constraints respected (no new opcodes, precompiles, frame modes, account-encoding changes, sighash changes) are listed in [`docs/overview.md`](../overview.md). Identified as the minimum requirement in [`docs/priorities.md`](../priorities.md).
+Individual alternative. Adds a tx-scoped mechanism that lets PQ accounts be recognized by immutable contracts that call `ECRECOVER` on application digests. The secp256k1 path is byte-for-byte unchanged. Constraints respected (no new opcodes, precompiles, frame modes, account-encoding changes, sighash changes) are listed in [`docs/overview.md`](../overview.md). Identified as the minimum requirement in [`docs/priorities.md`](../priorities.md).
 
 ## 2. Motivation
 
@@ -42,7 +41,7 @@ Deploy immutable `PubkeyRegistry` at a reserved address. A successful PQ VERIFY 
 
 ### Why registry-only (no envelope inlining)
 
-Every NIST PQC scheme has at least one element (pk or sig) measured in kilobytes; carrying both per-tx multiplies mempool bandwidth and witness size. Registry-only bounds per-tx cost to one storage slot read regardless of scheme. Size analysis in [`appendix/pq-analysis.md`](../appendix/pq-analysis.md).
+The pubkey-size case is exclusive to lattice (897 B-2.6 KB) and multivariate (1.2-5.5 KB); inlining kilobyte-scale pubkeys per tx multiplies mempool bandwidth and witness size. Hash-based pubkeys (32-64 B) would be fine to inline on size grounds, but supporting both pubkey-by-reference and pubkey-by-value forks the protocol into two binding chains, two mempool admission stories, and two RPC shapes for one logical capability. Registry-only is uniform across all PQ families and bounds per-tx cost to one storage slot read regardless of scheme. Size and threat-model analysis in [`appendix/pq-analysis.md`](../appendix/pq-analysis.md).
 
 ### Registry
 
@@ -94,7 +93,7 @@ Wallet UX: surface "this tx will let `<contract>` recognize you as `<address>` v
 
 ## 9. Compatibility and interactions
 
-- **2D nonces:** orthogonal. Binding scope is tx-local; nonce-stream selection is tx-level.
+- **flexible nonces:** orthogonal. Binding scope is tx-local; nonce-stream selection is tx-level.
 - **Validity windows:** orthogonal. The verified-signers table is rebuilt per-tx; window enforcement runs before any frame.
 - **Guarantors:** orthogonal. A guarantor-backed tx may include binding PQ VERIFY frames; the guarantor's commitment is independent.
 - **EIP-8151:** complementary. EIP-8151 zeros revoked-key recovery; signer binding provides the positive PQ path for the same address.
@@ -105,11 +104,7 @@ Wallet UX: surface "this tx will let `<contract>` recognize you as `<address>` v
 
 ## 10. Open questions
 
-| # | Question | Status |
-|---|---|---|
-| Q12 | PQ size caps for follow-on uses (e.g., Phase-2 permissions) | Best-guess; see [`docs/overview.md`](../overview.md) open uncertainties. Phase-2 only. |
-
-No open questions block this proposal.
+None block this proposal.
 
 ## 11. Appendix references
 
