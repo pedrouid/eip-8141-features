@@ -14,7 +14,7 @@ Shared appendices:  system-contracts, verified-signers, mempool-tiers,
 
 ## 1. Status and scope
 
-Phase-1 alternative (aggregated). All three Phase-1 features in one upgrade: 2D nonces (P1.N) + signer binding (P1.S) + validity windows (P1.W). This doc is the merged spec; sections labelled **Inherited from §X** restate component content, sections labelled **New** cover the cross-feature analysis. Constraints respected (no new opcodes, precompiles, frame modes, account-encoding changes, sighash changes) are listed in [`docs/overview.md`](../overview.md).
+Phase-1 alternative (aggregated). All three Phase-1 features in one upgrade: 2D nonces (P1.N) + signer binding (P1.S) + validity windows (P1.W). This doc is the merged spec; sections labelled **Inherited from §X** restate component content, sections labelled **New** cover the cross-feature analysis. Constraints respected (no new opcodes, precompiles, frame modes, account-encoding changes, sighash changes) are listed in [`docs/overview.md`](../overview.md). Identified as the maximum viable bundle in [`docs/priorities.md`](../priorities.md).
 
 ## 2. Motivation
 

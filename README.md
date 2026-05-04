@@ -9,10 +9,11 @@ Account abstraction already exists on Ethereum via ERC-4337 (above the protocol)
 ## How to review this repo
 
 1. Read `README.md` for scope and the repository map.
-2. Read `docs/overview.md` for the alternative set and comparison table.
-3. Pick one Phase-1 alternative and read only its proposal doc.
-4. Read the appendix files referenced by that proposal.
-5. Read Phase 2 only if evaluating the later delegated-permissions path.
+2. Read `docs/overview.md` for the alternative set and comparison table (technical, objective).
+3. Read `docs/priorities.md` for the opinionated framing: which bundles are viable in one upgrade, what is load-bearing, what folds in (subjective companion to the overview).
+4. Pick one Phase-1 alternative and read only its proposal doc.
+5. Read the appendix files referenced by that proposal.
+6. Read Phase 2 only if evaluating the later delegated-permissions path.
 
 Terminology used across the docs is defined once in `docs/glossary.md`.
 
@@ -48,7 +49,7 @@ ERC-7710/7715-style delegated permissions on top of a standalone `execution-auth
 
 **Stretch:** Phase 1 is already a substantial upgrade. Bundling permissions on top is explicitly not recommended. See `docs/phase-2/permissions.md` for the prominent stretch warning and prerequisite list.
 
-See [`docs/overview.md`](docs/overview.md) for the phased pitch, per-alternative analysis, and open uncertainties.
+See [`docs/overview.md`](docs/overview.md) for the phased pitch, per-alternative analysis, and open uncertainties. See [`docs/priorities.md`](docs/priorities.md) for the opinionated take on which bundles are viable under the one-upgrade constraint.
 
 ---
 
@@ -57,6 +58,7 @@ See [`docs/overview.md`](docs/overview.md) for the phased pitch, per-alternative
 ```
 docs/
 ├── overview.md             # Read first; covers scope, the five alternatives, and tradeoffs
+├── priorities.md           # Subjective companion; ranks bundles under the one-upgrade constraint
 ├── glossary.md             # Single canonical definition per term
 │
 ├── phase-1/                # Phase-1 alternatives (pick one)

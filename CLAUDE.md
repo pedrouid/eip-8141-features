@@ -8,7 +8,7 @@ Instructions for AI agents and contributors working on this repository.
 
 This repo proposes an **expansion of [EIP-8141](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-8141.md)** (Frame Transaction), the **native AA upgrade** for Ethereum. AA already exists via ERC-4337 and EIP-7702; EIP-8141 lifts AA to the native protocol layer. The proposals here extend that upgrade's scope in two phases. Each proposal is iterated against core dev and wallet dev review pressure.
 
-**The repo does not pick a recommended Phase-1 alternative.** Five neutral alternatives are presented for core devs and wallet devs to weigh.
+**`docs/overview.md` does not pick a recommended Phase-1 alternative.** Five neutral alternatives are presented for core devs and wallet devs to weigh. The subjective companion is `docs/priorities.md`, which ranks the alternatives by load-bearing weight under the one-upgrade constraint and rules out standalone P1.N and P1.W on that basis. The two docs are paired: overview is technical and objective, priorities is product-y and subjective.
 
 ---
 
@@ -45,6 +45,8 @@ Directory-based layout. Each Phase has its own subdirectory under `docs/`.
 ```
 docs/
 ├── overview.md             # Read first; covers scope, the five alternatives, and tradeoffs
+├── priorities.md           # Subjective companion; ranks bundles under the one-upgrade constraint
+├── glossary.md             # Single canonical definition per term
 │
 ├── phase-1/                # Pick one alternative
 │   ├── 2d-nonces.md
@@ -68,7 +70,7 @@ docs/
 
 **Feature proposals** describe user-facing capabilities with spec deltas. Proposals reference the shared appendix specs rather than duplicating them.
 **Appendix** holds cross-cutting primitives, shared specs (system contracts, verified-signers table + modified ECRECOVER, mempool tiers), and grounding analyses (PQ sizing, reth pipeline). PQ-analysis absorbs scheme-specific detail so proposals stay scheme-agnostic.
-**Top-level doc** is `overview.md`: phased pitch, per-alternative analysis, comparison table, Phase-2 framing, and open uncertainties in one file.
+**Top-level docs** are `overview.md` (technical: phased pitch, per-alternative analysis, comparison table, Phase-2 framing, open uncertainties) and `priorities.md` (subjective: ranks the alternatives by load-bearing weight, argues the one-upgrade constraint, names viable bundles).
 
 ---
 
@@ -138,8 +140,9 @@ Every doc opens with `# <Title>`, optionally followed by a single italicised con
 ## When picking up work
 
 1. Read `docs/overview.md` first; it covers the phased model, per-alternative analysis, and open uncertainties.
-2. If working on a specific proposal, read it directly; feedback pressure is already baked in.
-3. Shared specs live in `docs/appendix/`: registry contracts (`system-contracts.md`), verified-signers table + modified ECRECOVER (`verified-signers.md`), mempool tiers (`mempool-tiers.md`), curve data (`pq-analysis.md`). Proposals reference these; don't duplicate them.
+2. Read `docs/priorities.md` for the opinionated framing: which bundles are viable in one upgrade, what is load-bearing, what folds in, what falls out.
+3. If working on a specific proposal, read it directly; feedback pressure is already baked in.
+4. Shared specs live in `docs/appendix/`: registry contracts (`system-contracts.md`), verified-signers table + modified ECRECOVER (`verified-signers.md`), mempool tiers (`mempool-tiers.md`), curve data (`pq-analysis.md`). Proposals reference these; don't duplicate them.
 
 ---
 
@@ -149,7 +152,8 @@ If an alternative is selected, update in this order to keep the chain of reasoni
 
 1. The relevant Phase-1 doc (already aligned via the per-alternative content).
 2. `docs/overview.md` if the per-alternative analysis, comparison table, or open-uncertainties section needs to move.
-3. `README.md` TL;DR.
+3. `docs/priorities.md` if the ranking or the viable-bundles list shifts.
+4. `README.md` TL;DR.
 
 The current state of the repo assumes no alternative has been picked.
 

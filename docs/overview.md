@@ -2,7 +2,7 @@
 
 Account abstraction already exists on Ethereum via ERC-4337 (above the protocol) and EIP-7702 (delegating to code). EIP-8141 is the **native AA upgrade**: it lifts AA to the native protocol layer with a frame-based transaction model. This repo proposes an expansion of that upgrade in two phases.
 
-Phase 1 is presented as five neutral alternatives with no recommended pick; Phase 2 is a separate follow-on upgrade and is not weighed against any Phase-1 alternative.
+Phase 1 is presented as five neutral alternatives with no recommended pick; Phase 2 is a separate follow-on upgrade and is not weighed against any Phase-1 alternative. The opinionated companion to this overview is [`priorities.md`](priorities.md), which ranks the alternatives by load-bearing weight under the one-upgrade constraint.
 
 ## Phase 1: expanded native AA upgrade
 

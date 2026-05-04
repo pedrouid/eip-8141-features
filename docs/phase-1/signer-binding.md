@@ -11,7 +11,7 @@ Shared appendices:  system-contracts, verified-signers, mempool-tiers, sighash-b
 
 ## 1. Status and scope
 
-Phase-1 alternative (individual). Adds a tx-scoped mechanism that lets PQ accounts be recognized by immutable contracts that call `ECRECOVER` on application digests. The secp256k1 path is byte-for-byte unchanged. Constraints respected (no new opcodes, precompiles, frame modes, account-encoding changes, sighash changes) are listed in [`docs/overview.md`](../overview.md).
+Phase-1 alternative (individual). Adds a tx-scoped mechanism that lets PQ accounts be recognized by immutable contracts that call `ECRECOVER` on application digests. The secp256k1 path is byte-for-byte unchanged. Constraints respected (no new opcodes, precompiles, frame modes, account-encoding changes, sighash changes) are listed in [`docs/overview.md`](../overview.md). Identified as the minimum requirement in [`docs/priorities.md`](../priorities.md).
 
 ## 2. Motivation
 
