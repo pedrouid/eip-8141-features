@@ -25,7 +25,7 @@ The design discipline behind every alternative is to keep its added flow restric
 
 | Flow | Tier |
 |---|---|
-| flexible nonces (`nonce_key > 0`): `NonceLaneRegistry.check` is one slot read | Restrictive |
+| Flexible nonces (`nonce_key > 0`): `NonceLaneRegistry.check` is one slot read | Restrictive |
 | Validity windows: `valid_after`, `valid_before` deterministic from envelope | Restrictive |
 | Validity windows beyond tier horizon | Expansive (24 h) or direct-to-builder (unlimited) |
 | Signer binding: `PubkeyRegistry.get` is one slot read | Restrictive (PQ verify gas absorbed by 100 k prefix once stage-2 PQ precompiles ship; expansive before then) |
@@ -35,7 +35,7 @@ The design discipline behind every alternative is to keep its added flow restric
 
 | Feature | New restrictive-tier reads |
 |---|---|
-| flexible nonces | One slot per touched `(sender, nonce_key)` lane on `NonceLaneRegistry`. |
+| Flexible nonces | One slot per touched `(sender, nonce_key)` lane on `NonceLaneRegistry`. |
 | Signer binding | One slot per binding VERIFY frame on `PubkeyRegistry`. |
 | Validity windows | None (pure envelope check). |
 | Guarantors | Guarantor's own VERIFY must itself fit restrictive-tier rules. |
@@ -44,7 +44,7 @@ Aggregated alternatives (`key-lanes`, `authorization-scopes`) sum the above.
 
 ## Caps that protect restrictive admission
 
-- `MAX_ACTIVE_STREAMS_PER_SENDER = 16` (flexible nonces): bounds non-zero-key txs per sender in public mempool.
+- `MAX_ACTIVE_STREAMS_PER_SENDER = 16` (Flexible nonces): bounds non-zero-key txs per sender in public mempool.
 - `MAX_BOUND_SIGNERS = 8` (signer binding): bounds verified-signers-table population per tx.
 - Tiered validity-window deferral (validity windows): public mempool 1 h; expansive 24 h; direct-to-builder unlimited.
 - `GOSSIP_THRESHOLD = 60 s` (validity windows): future-valid txs held locally until within threshold of `valid_after`.

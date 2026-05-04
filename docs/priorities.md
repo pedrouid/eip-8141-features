@@ -66,11 +66,11 @@ EIP-8141 must therefore specify either:
 
 The registry option lands inside existing snap-sync, witness, and state-tree machinery without account-encoding changes; it is the conservative pick. The **inline pubkey path is rejected unconditionally**: even where size permits it (hash-based), forking the protocol into two pubkey-resolution paths costs more than it saves, and forfeits forward compatibility with the schemes (lattice, multivariate) where size genuinely forbids inlining.
 
-## Folding in flexible nonces
+## Folding in Flexible nonces
 
 Flexible nonces are presented as a separate feature ([`proposals/flexible-nonces.md`](proposals/flexible-nonces.md)) backed by a dedicated `NonceLaneRegistry`. Under the one-upgrade constraint, a separate registry shipped later is not on the table: it would mean a second consensus rule on tx admission, a second mempool policy, a second RPC, and a second cross-client review cycle, none of which the Ethereum core-dev process is structured to absorb on a per-feature basis.
 
-The only viable path is to fold flexible nonces into the same `PubkeyRegistry` that signer binding already requires. Each registry entry carries its own 64-bit sequence number; the pubkey selector doubles as the nonce-lane selector, and every registered signer is automatically its own stream.
+The only viable path is to fold Flexible nonces into the same `PubkeyRegistry` that signer binding already requires. Each registry entry carries its own 64-bit sequence number; the pubkey selector doubles as the nonce-lane selector, and every registered signer is automatically its own stream.
 
 ```solidity
 struct Entry {
@@ -82,22 +82,22 @@ struct Entry {
 
 The pre-tx rule becomes a single registry consult: resolve the signer, check the per-entry sequence, advance it on inclusion. The stream-advance-on-inclusion invariant from [`appendix/guarantors.md`](appendix/guarantors.md) carries over unchanged, since advancement is keyed on the bound signer rather than on a free-form `nonce_key`. The same shape works under the account-state-trie variant.
 
-If the upgrade ships signer binding with this `seq` field on day one, flexible nonces are deliverable. If it ships without, flexible nonces are not deliverable in this upgrade and not deliverable after it.
+If the upgrade ships signer binding with this `seq` field on day one, Flexible nonces are deliverable. If it ships without, Flexible nonces are not deliverable in this upgrade and not deliverable after it.
 
 ## Folding in validity windows
 
 Validity windows ([`proposals/validity-windows.md`](proposals/validity-windows.md)) close the stale-signature gap. They are useful, FOCIL-friendly, and the smallest possible envelope change in isolation. They are not load-bearing for the central claim, but the same one-upgrade constraint applies: two envelope fields and a pre-tx time check land in this upgrade or not at all.
 
-Wallet-side mitigations (short-lived intents, refresh on demand) cover most of the user-visible gap if windows are dropped. The decision is therefore whether the upgrade can absorb the additional envelope surface and pre-tx check in the same review cycle as signer binding and flexible nonces, not whether they can be added later.
+Wallet-side mitigations (short-lived intents, refresh on demand) cover most of the user-visible gap if windows are dropped. The decision is therefore whether the upgrade can absorb the additional envelope surface and pre-tx check in the same review cycle as signer binding and Flexible nonces, not whether they can be added later.
 
 ## Three viable bundles
 
 Under the one-upgrade constraint, the five alternatives in [`overview.md`](overview.md) collapse to three viable bundles:
 
-- **S (signer binding)**, the minimum requirement. `PubkeyRegistry`, verified-signers table, `ECRECOVER` hit-path-first lookup. No flexible nonces, no validity windows.
+- **S (signer binding)**, the minimum requirement. `PubkeyRegistry`, verified-signers table, `ECRECOVER` hit-path-first lookup. No Flexible nonces, no validity windows.
 - **NS (key lanes)**, the middle ground. Signer binding with a per-entry `seq` field, plus the `nonce_key` envelope field and per-lane mempool rules. One registry, two features.
 - **NSW (authorization scopes)**, the maximum. NS plus validity windows. The most user-visible bundle achievable in one upgrade.
 
-Standalone **N** (flexible nonces only) and **W** (validity windows only) are not viable under this constraint. They ship a tx model that cannot accommodate PQ accounts on day one, and there is no second upgrade in which to add signer binding afterwards. They appear in `overview.md` for completeness; this doc rules them out.
+Standalone **N** (Flexible nonces only) and **W** (validity windows only) are not viable under this constraint. They ship a tx model that cannot accommodate PQ accounts on day one, and there is no second upgrade in which to add signer binding afterwards. They appear in `overview.md` for completeness; this doc rules them out.
 
 The hierarchy: **NSW is best, NS is the middle ground, S is the minimum.** The decision between them is review burden in one cycle, not feature pickability across cycles. S is the answer to "what must be in this upgrade for EIP-8141 to deliver on its own premise"; NS and NSW are answers to "how much more can the same upgrade carry without losing review."

@@ -13,21 +13,21 @@ The proposals expand the scope of the existing EIP-8141 upgrade. They do not rep
 
 Alternatives differ only in which combination of three independent features is added on top:
 
-- **N**: flexible nonces, aka 2D nonces (envelope `nonce_key`, `NonceLaneRegistry`).
+- **N**: Flexible nonces, aka 2D nonces (envelope `nonce_key`, `NonceLaneRegistry`).
 - **S**: Signer binding (registry-backed; `PubkeyRegistry`; tx-scoped verified-signers table).
 - **W**: Validity windows (envelope `valid_after`, `valid_before`).
 
 | ID | Doc | Features |
 |---|---|---|
-| **N** | [`proposals/flexible-nonces.md`](proposals/flexible-nonces.md) | flexible nonces |
+| **N** | [`proposals/flexible-nonces.md`](proposals/flexible-nonces.md) | Flexible nonces |
 | **S** | [`proposals/signer-binding.md`](proposals/signer-binding.md) | Signer binding |
 | **W** | [`proposals/validity-windows.md`](proposals/validity-windows.md) | Validity windows |
-| **NS** | [`proposals/key-lanes.md`](proposals/key-lanes.md) | flexible nonces + signer binding |
-| **NSW** | [`proposals/authorization-scopes.md`](proposals/authorization-scopes.md) | flexible nonces + signer binding + validity windows |
+| **NS** | [`proposals/key-lanes.md`](proposals/key-lanes.md) | Flexible nonces + signer binding |
+| **NSW** | [`proposals/authorization-scopes.md`](proposals/authorization-scopes.md) | Flexible nonces + signer binding + validity windows |
 
 ## Per-alternative analysis
 
-### N, flexible nonces
+### N, Flexible nonces
 
 **Protocol surface**: 1 envelope field (`nonce_key`), 1 system contract (`NonceLaneRegistry`), 1 pre-tx system call, per-lane mempool rules, `eth_getTransactionCountByKey`.
 
@@ -57,7 +57,7 @@ Alternatives differ only in which combination of three independent features is a
 
 **What it leaves on the table**: stuck-tx problem and PQ-recovery gap untouched.
 
-### NS, key lanes (flexible nonces + signer binding)
+### NS, key lanes (Flexible nonces + signer binding)
 
 **Protocol surface**: 1 envelope field, 2 system contracts, 1 pre-tx system call, RPC additions, `ECRECOVER` extension, joint mempool caps.
 
@@ -120,6 +120,6 @@ One item remains best-guess pending data; it does not block a proposal landing.
 
 | # | Question | Status |
 |---|---|---|
-| Q6 | VOPS state-growth budget for `NonceLaneRegistry` | Back-of-envelope math (~2 GB/year legitimate; ~1 GB/day adversarial cap before SSTORE-from-zero + mempool caps saturate). Needs cross-client benchmarks. Applies to any alternative including flexible nonces (N, NS, NSW). |
+| Q6 | VOPS state-growth budget for `NonceLaneRegistry` | Back-of-envelope math (~2 GB/year legitimate; ~1 GB/day adversarial cap before SSTORE-from-zero + mempool caps saturate). Needs cross-client benchmarks. Applies to any alternative including Flexible nonces (N, NS, NSW). |
 
 Flagged in the proposals where it applies; this section keeps it visible to a reviewer skimming the overview.

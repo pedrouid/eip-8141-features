@@ -12,7 +12,7 @@ Shared appendices:  system-contracts, verified-signers, mempool-tiers,
 
 ## 1. Status and scope
 
-Aggregated alternative. Lands flexible nonces (N) and signer binding (S) in one upgrade. This doc is the merged spec; sections labelled **Inherited from §X** restate component content for completeness, sections labelled **New** cover the cross-feature analysis. Constraints respected (no new opcodes, precompiles, frame modes, account-encoding changes, sighash changes) are listed in [`docs/overview.md`](../overview.md). Identified as the middle ground in [`docs/priorities.md`](../priorities.md).
+Aggregated alternative. Lands Flexible nonces (N) and signer binding (S) in one upgrade. This doc is the merged spec; sections labelled **Inherited from §X** restate component content for completeness, sections labelled **New** cover the cross-feature analysis. Constraints respected (no new opcodes, precompiles, frame modes, account-encoding changes, sighash changes) are listed in [`docs/overview.md`](../overview.md). Identified as the middle ground in [`docs/priorities.md`](../priorities.md).
 
 ## 2. Motivation
 
@@ -130,7 +130,7 @@ Per-feature analyses in [`flexible-nonces.md`](flexible-nonces.md) §8 and [`sig
 
 - **Validity windows** (if also adopted, e.g., as NSW): orthogonal. Future-valid tx holds its stream position until lands or expires; the verified-signers table is rebuilt per-tx.
 - **Guarantors:** confirms stream-advance invariant; orthogonal to signer binding.
-- **Sighash binding:** flexible-nonce key bound by envelope placement (Class A); binding digests sit in elided VERIFY data, integrity covered by signature-over-pubkey check (Class B). See [`appendix/sighash-binding.md`](../appendix/sighash-binding.md).
+- **Sighash binding:** Flexible-nonce key bound by envelope placement (Class A); binding digests sit in elided VERIFY data, integrity covered by signature-over-pubkey check (Class B). See [`appendix/sighash-binding.md`](../appendix/sighash-binding.md).
 - **vs. shipping each individually across upgrades:** same protocol surface, one upgrade's review effort, shared system-contract precedent, shared mempool reasoning.
 - **vs. ERC-4337:** 4337 packs key+seq into one `uint256` because it lives above the protocol; key-lanes uses two envelope fields. ERC-4337 has no analogue to signer binding.
 

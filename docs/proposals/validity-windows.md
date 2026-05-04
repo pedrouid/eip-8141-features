@@ -108,7 +108,7 @@ Wallet display (non-normative):
 
 - **Sighash binding:** resolved by envelope placement (Class A; see [`appendix/sighash-binding.md`](../appendix/sighash-binding.md)).
 - **Guarantors:** if a tx expires between admission and inclusion, mempool drops it; guarantor doesn't pay for non-includable txs.
-- **flexible nonces:** orthogonal. A future-valid tx holds its stream position until it lands or expires; doesn't block other streams.
+- **Flexible nonces:** orthogonal. A future-valid tx holds its stream position until it lands or expires; doesn't block other streams.
 - **Signer binding:** orthogonal. Window enforcement runs before any frame; the verified-signers table is rebuilt per-tx.
 - **vs. Tempo:** same shape, same reasoning. Both native designs converge on envelope-level validity.
 - **vs. ERC-4337:** 4337's `validUntil`/`validAfter` live in UserOperation payload, enforced by bundlers. Protocol nodes have no view. This proposal moves the primitive down into the protocol.

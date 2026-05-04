@@ -22,7 +22,7 @@ Terminology used across the docs is defined once in `docs/glossary.md`.
 
 The proposals expand the scope of the existing EIP-8141 upgrade. They ship in the same activation as EIP-8141, adding guarantors plus a chosen subset of three independent features:
 
-- **flexible nonces**, protocol-native parallel nonce streams.
+- **Flexible nonces**, protocol-native parallel nonce streams.
 - **Signer binding**, registry-backed PQ identity for `ECRECOVER` callers.
 - **Validity windows**, envelope-level `valid_after` / `valid_before` time bounds.
 
@@ -30,11 +30,11 @@ The proposals are presented as **five neutral alternatives**: three individual a
 
 | Alternative | Doc | Features bundled |
 |---|---|---|
-| flexible nonces | `docs/proposals/flexible-nonces.md` | flexible nonces |
+| Flexible nonces | `docs/proposals/flexible-nonces.md` | Flexible nonces |
 | Signer binding | `docs/proposals/signer-binding.md` | Signer binding |
 | Validity windows | `docs/proposals/validity-windows.md` | Validity windows |
-| Key lanes | `docs/proposals/key-lanes.md` | flexible nonces + signer binding |
-| Authorization scopes | `docs/proposals/authorization-scopes.md` | flexible nonces + signer binding + validity windows |
+| Key lanes | `docs/proposals/key-lanes.md` | Flexible nonces + signer binding |
+| Authorization scopes | `docs/proposals/authorization-scopes.md` | Flexible nonces + signer binding + validity windows |
 
 Every alternative ships guarantors (PR #11555) as the small mempool primitive that confirms the stream-advance invariant and unlocks public-mempool ERC-20 paymasters.
 
@@ -51,11 +51,11 @@ docs/
 ├── glossary.md             # Single canonical definition per term
 │
 ├── proposals/              # Pick one alternative
-│   ├── flexible-nonces.md            # Individual: flexible nonces
+│   ├── flexible-nonces.md            # Individual: Flexible nonces
 │   ├── signer-binding.md       # Individual: registry-backed PQ identity
 │   ├── validity-windows.md     # Individual: envelope time bounds
-│   ├── key-lanes.md            # Aggregated: flexible nonces + signer binding
-│   └── authorization-scopes.md # Aggregated: flexible nonces + signer binding + validity windows
+│   ├── key-lanes.md            # Aggregated: Flexible nonces + signer binding
+│   └── authorization-scopes.md # Aggregated: Flexible nonces + signer binding + validity windows
 │
 └── appendix/               # Cross-cutting primitives, shared specs, and grounding analyses
     ├── guarantors.md           # APPROVE(guarantee), in every alternative

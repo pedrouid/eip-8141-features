@@ -13,7 +13,7 @@ Shared appendices:  system-contracts, verified-signers, mempool-tiers,
 
 ## 1. Status and scope
 
-Aggregated alternative. All three features in one upgrade: flexible nonces (N) + signer binding (S) + validity windows (W). This doc is the merged spec; sections labelled **Inherited from §X** restate component content, sections labelled **New** cover the cross-feature analysis. Constraints respected (no new opcodes, precompiles, frame modes, account-encoding changes, sighash changes) are listed in [`docs/overview.md`](../overview.md). Identified as the maximum viable bundle in [`docs/priorities.md`](../priorities.md).
+Aggregated alternative. All three features in one upgrade: Flexible nonces (N) + signer binding (S) + validity windows (W). This doc is the merged spec; sections labelled **Inherited from §X** restate component content, sections labelled **New** cover the cross-feature analysis. Constraints respected (no new opcodes, precompiles, frame modes, account-encoding changes, sighash changes) are listed in [`docs/overview.md`](../overview.md). Identified as the maximum viable bundle in [`docs/priorities.md`](../priorities.md).
 
 ## 2. Motivation
 
@@ -144,7 +144,7 @@ Per-feature analyses in components apply. **New** cross-feature considerations:
 - **Sighash binding:** lane key and window bounds bound by envelope placement (Class A); binding digests sit in elided VERIFY data, integrity from signature-over-pubkey check (Class B). See [`appendix/sighash-binding.md`](../appendix/sighash-binding.md).
 - **vs. shipping each individually across upgrades:** same protocol surface, one upgrade's review effort, shared system-contract precedent, shared mempool-tier reasoning.
 - **vs. `key-lanes.md`:** adds validity windows. Cheap addition (envelope-only, no state, no contracts), large user-safety upside.
-- **vs. ERC-4337:** 4337 has analogues for flexible nonces and validity windows but only for smart accounts via bundlers; no analogue for signer binding.
+- **vs. ERC-4337:** 4337 has analogues for Flexible nonces and validity windows but only for smart accounts via bundlers; no analogue for signer binding.
 
 ## 10. Open questions
 

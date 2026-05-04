@@ -60,4 +60,4 @@ Reference: [`appendix/sighash-binding.md`](appendix/sighash-binding.md).
 
 ## Repo conventions
 
-**Alternative ID**. `N` (flexible nonces), `S` (signer binding), `W` (validity windows), `NS` (key lanes), `NSW` (authorization scopes). See [`overview.md`](overview.md).
+**Alternative ID**. `N` (Flexible nonces), `S` (signer binding), `W` (validity windows), `NS` (key lanes), `NSW` (authorization scopes). See [`overview.md`](overview.md).

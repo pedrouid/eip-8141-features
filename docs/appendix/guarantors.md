@@ -31,7 +31,7 @@ Key property: guarantors route shared-state reads from a mempool-policy problem 
 - Sender's stream advances even on VERIFY failure; sender retries next sequence.
 - Guarantor griefing is economically bounded: a guarantor backing a failing tx burns their own gas.
 
-This pins the flexible-nonces "always-advance on inclusion" invariant.
+This pins the Flexible-nonces "always-advance on inclusion" invariant.
 
 ## Position across the alternatives
 
@@ -43,15 +43,15 @@ Independently of any other feature, guarantors enable:
 - Privacy flows with nullifier reads.
 - Complex AA validation where a third party underwrites shared-state-read risk.
 
-## Impact on flexible nonces
+## Impact on Flexible nonces
 
-Small, confirming. Per-stream sequence is monotone on inclusion independent of VERIFY success. Mempool readiness unaffected; the guarantor commitment is additional validation, not a substitute for the nonce check. No spec changes to flexible nonces; the stream-advance rule is now a pinned normative invariant in any alternative that includes flexible nonces (`flexible-nonces.md`, `key-lanes.md`, `authorization-scopes.md`).
+Small, confirming. Per-stream sequence is monotone on inclusion independent of VERIFY success. Mempool readiness unaffected; the guarantor commitment is additional validation, not a substitute for the nonce check. No spec changes to Flexible nonces; the stream-advance rule is now a pinned normative invariant in any alternative that includes Flexible nonces (`flexible-nonces.md`, `key-lanes.md`, `authorization-scopes.md`).
 
-The dependence runs both ways. A guarantor sponsoring many txs in parallel must advance a nonce per sponsorship for replay protection but cannot serialise every sponsorship through a single guarantor nonce without bottlenecking throughput. Flexible nonces give each sponsorship its own stream, which is why broad guarantor adoption is more tractable when flexible nonces are also in scope. The combination is still being scoped; whether the two features ship in the same upgrade or flexible nonces precede via a separate EIP is an open coordination question.
+The dependence runs both ways. A guarantor sponsoring many txs in parallel must advance a nonce per sponsorship for replay protection but cannot serialise every sponsorship through a single guarantor nonce without bottlenecking throughput. Flexible nonces give each sponsorship its own stream, which is why broad guarantor adoption is more tractable when Flexible nonces are also in scope. The combination is still being scoped; whether the two features ship in the same upgrade or Flexible nonces precede via a separate EIP is an open coordination question.
 
 ## Interactions with other primitives
 
-- **flexible nonces**: confirms stream-advance invariant.
+- **Flexible nonces**: confirms stream-advance invariant.
 - **Validity windows**: orthogonal. If a tx expires between admission and inclusion, mempool drops it; guarantor doesn't pay for non-includable txs.
 - **Signer binding**: orthogonal. A guarantor-backed tx may include binding PQ VERIFY frames; the guarantor's commitment is independent.
 - **Sighash binding**: unaffected.
@@ -66,4 +66,4 @@ The dependence runs both ways. A guarantor sponsoring many txs in parallel must 
 
 ## Summary
 
-Small surface (one APPROVE scope, one tx-scoped field, one mempool relaxation); substantial downstream effect. Enables public-mempool ERC-20 paymasters and confirms the stream-advance invariant relied on by flexible nonces. Bundled into every alternative; independently valuable even if every other feature is dropped.
+Small surface (one APPROVE scope, one tx-scoped field, one mempool relaxation); substantial downstream effect. Enables public-mempool ERC-20 paymasters and confirms the stream-advance invariant relied on by Flexible nonces. Bundled into every alternative; independently valuable even if every other feature is dropped.

@@ -16,7 +16,7 @@ This repo proposes an **expansion of [EIP-8141](https://github.com/ethereum/EIPs
 
 EIP-8141 + guarantors + a chosen subset of three independent features:
 
-- **flexible nonces**
+- **Flexible nonces**
 - **Signer binding** (registry-only; inline-envelope path explicitly rejected)
 - **Validity windows**
 
@@ -24,11 +24,11 @@ Five alternatives (three individual + two aggregated):
 
 | Alternative | Doc | Features |
 |---|---|---|
-| flexible nonces | `docs/proposals/flexible-nonces.md` | flexible nonces |
+| Flexible nonces | `docs/proposals/flexible-nonces.md` | Flexible nonces |
 | Signer binding | `docs/proposals/signer-binding.md` | Signer binding |
 | Validity windows | `docs/proposals/validity-windows.md` | Validity windows |
-| Key lanes | `docs/proposals/key-lanes.md` | flexible nonces + signer binding |
-| Authorization scopes | `docs/proposals/authorization-scopes.md` | flexible nonces + signer binding + validity windows |
+| Key lanes | `docs/proposals/key-lanes.md` | Flexible nonces + signer binding |
+| Authorization scopes | `docs/proposals/authorization-scopes.md` | Flexible nonces + signer binding + validity windows |
 
 ---
 
@@ -46,7 +46,7 @@ docs/
 │   ├── flexible-nonces.md
 │   ├── signer-binding.md
 │   ├── validity-windows.md
-│   ├── key-lanes.md            # Aggregated (flexible nonces + signer binding)
+│   ├── key-lanes.md            # Aggregated (Flexible nonces + signer binding)
 │   └── authorization-scopes.md # Aggregated (all three)
 │
 └── appendix/               # Cross-cutting primitives, shared specs, and grounding analyses
@@ -111,7 +111,7 @@ The `signer-binding.md` proposal (and any aggregated alternative including it) u
 - **Mempool-tier classification**, short table or paragraph naming which flows land in restrictive vs. expansive vs. private tiers.
 - **PQ-compatibility note**, one paragraph pointing at `docs/appendix/pq-analysis.md` for scheme-specific data.
 - **FOCIL-compatibility note**, one paragraph citing attester-facing invariants relevant to the proposal.
-- **Stream-advance-on-inclusion rule**, for any proposal including flexible nonces, pin the normative invariant that the per-stream sequence advances on successful inclusion regardless of VERIFY outcome. Cited from `docs/appendix/guarantors.md`.
+- **Stream-advance-on-inclusion rule**, for any proposal including Flexible nonces, pin the normative invariant that the per-stream sequence advances on successful inclusion regardless of VERIFY outcome. Cited from `docs/appendix/guarantors.md`.
 
 ### Doc header
 
