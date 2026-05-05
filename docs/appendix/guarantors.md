@@ -5,24 +5,26 @@ Canonical for:  guarantor payer semantics, draft PR #11555, mempool relaxation
 Referenced by:  every alternative
 ```
 
-_Assumes [PR #11555](https://github.com/ethereum/EIPs/pull/11555) (derekchiang, Apr 22) lands in roughly its proposed shape; the design is still iterating and exact encoding may change. Bundled with every alternative; the proposals all ship "EIP-8141 + guarantors + the proposal's features."_
+_Origin: [PR #11555](https://github.com/ethereum/EIPs/pull/11555) (derekchiang, Apr 22). The consolidated [`/eip-8141.md`](../../eip-8141.md) folds guarantors directly into the EIP; the standalone proposals in this repo all ship "EIP-8141 + guarantors + the proposal's features." Encoding choices below match the consolidated draft._
 
 ## What guarantors are
 
-[PR #11555](https://github.com/ethereum/EIPs/pull/11555) introduces a **guarantor payer**: a party that commits to paying gas even if sender validation fails. When a tx carries a guarantor, mempool nodes may skip sender-VERIFY simulation entirely and propagate on the strength of the guarantor's signature alone. If on-chain execution reveals that sender VERIFY would have failed, the guarantor absorbs the gas.
+A **guarantor payer** is a party that commits to paying gas even if sender validation fails. When a tx carries a guarantor commitment, mempool nodes may skip sender-VERIFY simulation entirely and propagate on the strength of the guarantor's signature alone. If on-chain execution reveals that sender VERIFY would have failed, the guarantor absorbs the gas.
 
 Two mechanical effects:
 
-1. A new payer role, with final encoding still draft.
-2. A two-branch gas-payment model: sender pays on VERIFY success, guarantor pays otherwise.
+1. A new payer role, surfaced via the `APPROVE_GUARANTEE = 0x4` scope value on the existing `APPROVE` opcode.
+2. A two-branch gas-payment model: payer pays on `payer_approved`, guarantor pays otherwise.
 
 Key property: guarantors route shared-state reads from a mempool-policy problem into an economic-risk problem. A VERIFY frame reading an ERC-20 balance becomes mempool-admissible when a guarantor backs the tx.
 
 ## Protocol surface added
 
-- **Guarantor commitment**, currently draft in PR #11555 and encoded separately from ordinary payer approval.
-- **`guarantor: Optional[address]`** tx-scoped state, set by the guarantor commitment. Distinct from `payer_approved`.
-- **Gas-payment resolution** at inclusion time: sender VERIFY success → payer pays; sender VERIFY failure → guarantor pays.
+- **`APPROVE_GUARANTEE` scope** (`0x4`): a third bit in the APPROVE scope mask, used by a VERIFY frame whose target commits to underwriting the tx.
+- **`guarantor_approved: bool`** and **`guarantor: Optional[address]`** tx-scoped state, set by `APPROVE(APPROVE_GUARANTEE)`. Distinct from `payer_approved`.
+- **Gas-payment resolution** at inclusion time: if `payer_approved == true`, payer pays; otherwise if `guarantor_approved == true`, guarantor pays; otherwise tx is invalid.
+- **Validity exception** for the covered sender VERIFY frame: a sender VERIFY that exits without calling APPROVE is allowed (recorded as `frame.status = 0`) when `guarantor_approved == true` and the frame is at `guarantor_index + 1`. Subsequent SENDER frames are skipped while `sender_approved == false`.
+- **Per-frame signature hash** at `TXPARAM(0x0B)` (= `compute_frame_sig_hash(tx, currently_executing_frame_index)`): elides only the current frame's data, preserves every other VERIFY frame's data. Lets a guarantor sign a digest that binds the sender VERIFY data it is underwriting without self-referencing its own signature bytes.
 - **Mempool relaxation** conditional on a valid guarantor commitment: sender-VERIFY simulation skippable. The guarantor's own VERIFY still fits restrictive tier.
 
 ## Nonce consumption
@@ -45,7 +47,7 @@ Independently of any other feature, guarantors enable:
 
 ## Impact on Flexible nonces
 
-Small, confirming. Per-stream sequence is monotone on inclusion independent of VERIFY success. Mempool readiness unaffected; the guarantor commitment is additional validation, not a substitute for the nonce check. No spec changes to Flexible nonces; the stream-advance rule is now a pinned normative invariant in any alternative that includes Flexible nonces (`flexible-nonces.md`, `key-lanes.md`, `authorization-scopes.md`).
+Small, confirming. Per-stream sequence is monotone on inclusion independent of VERIFY success. Mempool readiness unaffected; the guarantor commitment is additional validation, not a substitute for the nonce check. No spec changes to Flexible nonces; the stream-advance rule is now a pinned normative invariant in any alternative that includes Flexible nonces (`flexible-nonces.md`, `key-streams.md`, `auth-scopes.md`).
 
 The dependence runs both ways. A guarantor sponsoring many txs in parallel must advance a nonce per sponsorship for replay protection but cannot serialise every sponsorship through a single guarantor nonce without bottlenecking throughput. Flexible nonces give each sponsorship its own stream, which is why broad guarantor adoption is more tractable when Flexible nonces are also in scope. The combination is still being scoped; whether the two features ship in the same upgrade or Flexible nonces precede via a separate EIP is an open coordination question.
 

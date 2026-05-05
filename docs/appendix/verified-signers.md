@@ -2,10 +2,10 @@
 
 ```
 Canonical for:  verified-signers table, modified ECRECOVER (hit-path-first lookup)
-Referenced by:  Signer binding, Key lanes, Authorization scopes
+Referenced by:  Signer binding, Key streams, Auth scopes
 ```
 
-_Canonical specification of the tx-scoped verified-signers table and the modified `ECRECOVER` semantics that back **signer binding**. Single source of truth referenced by [`signer-binding.md`](../proposals/signer-binding.md), [`key-lanes.md`](../proposals/key-lanes.md), and [`authorization-scopes.md`](../proposals/authorization-scopes.md). Background and registry state in [`appendix/system-contracts.md`](system-contracts.md) and [`appendix/pq-analysis.md`](pq-analysis.md)._
+_Canonical specification of the tx-scoped verified-signers table and the modified `ECRECOVER` semantics that back **signer binding**. Single source of truth referenced by [`signer-binding.md`](../proposals/signer-binding.md), [`key-streams.md`](../proposals/key-streams.md), and [`auth-scopes.md`](../proposals/auth-scopes.md). Background and registry state in [`appendix/system-contracts.md`](system-contracts.md) and [`appendix/pq-analysis.md`](pq-analysis.md)._
 
 ## Why signer binding exists
 
@@ -16,7 +16,7 @@ Signer binding threads the needle: a PQ VERIFY frame *proves* `(digest, address)
 ## Tx-scoped verified-signers table
 
 ```
-table: set[(digest32, address)]
+table: map[digest32 -> address]
 ```
 
 Lifecycle:
@@ -32,18 +32,18 @@ Per-tx cap: `MAX_BOUND_SIGNERS = 8`. Bounds table-population cost; matches appro
 A VERIFY frame binds a `(digest, address)` pair iff all of:
 
 1. `signature_type != 0x0` (secp256k1 needs no binding).
-2. `frame.data` carries a 32-byte application digest (after `signature_type`) followed by the PQ signature.
-3. The signature verifies under the declared scheme using the pubkey resolved from `PubkeyRegistry.get(frame.target)` (see [`appendix/system-contracts.md`](system-contracts.md)), bound to `frame.target` by the scheme's address rule.
-4. The frame calls `APPROVE`.
+2. The frame uses the **binding payload** sub-mode (`sub_mode = 0x01`): `frame.data = [signature_type, 0x01, application_digest (32 bytes), signature]`. This is distinct from the tx-auth sub-mode, which always binds `compute_sig_hash(tx)`; see the consolidated `eip-8141.md` default-code section.
+3. The signature verifies under the declared scheme using the pubkey resolved from the active signer registry, `PubkeyRegistry.get(frame.target)` for the standalone Signer-binding proposal or `AuthManager.getSigner(frame.target, signer)` for the Key-streams / Auth-scopes proposals (where `signer` comes from the envelope; see [`appendix/system-contracts.md`](system-contracts.md)), bound to `frame.target` by the scheme's address rule.
+4. The frame's `allowed_scope` does not include any tx-execution or payment scope (`APPROVE_EXECUTION`, `APPROVE_PAYMENT`, `APPROVE_PAYMENT_AND_EXECUTION`, `APPROVE_GUARANTEE`). Binding-only frames must not authorize the transaction.
 
-Multiple bindings per frame are allowed, up to the per-tx cap. Entries are write-once: a second insert with the same `(digest, address)` is a no-op; a conflict (same digest, different address) reverts the frame.
+Multiple bindings per frame are allowed, up to the per-tx cap (`MAX_BOUND_SIGNERS = 8` map entries). Entries are write-once: a second insert with the same `(digest, address)` is a no-op; a conflict (same `digest`, different `address`) reverts the frame.
 
 ## Modified ECRECOVER
 
 ```
 ECRECOVER(digest, v, r, s):
-    if (digest, addr) in tx.verified_signers:
-        return addr                                  // bound-signer hit
+    if digest in tx.verified_signers:
+        return tx.verified_signers[digest]            // bound-signer hit
     return existing_secp256k1_recover(digest, v, r, s) // unchanged; EIP-8151 still applies
 ```
 
@@ -53,7 +53,7 @@ ECRECOVER(digest, v, r, s):
 
 ## Mempool admission
 
-Restrictive-tier admissible: pubkey resolution is one storage slot read against `PubkeyRegistry`'s `storageRoot`. The 100 000 validation-prefix gas cap absorbs PQ verification once stage-2 PQ precompiles ship. Before then, signer-binding txs route through the expansive tier. See [`appendix/mempool-tiers.md`](mempool-tiers.md).
+Restrictive-tier admissible: pubkey resolution is one storage slot read against the active signer registry (`PubkeyRegistry` standalone, `AuthManager` aggregated). The 100 000 validation-prefix gas cap absorbs PQ verification once stage-2 PQ precompiles ship. Before then, signer-binding txs route through the expansive tier. See [`appendix/mempool-tiers.md`](mempool-tiers.md).
 
 The verified-signers table is rebuilt per-tx; RBF and block-invalidation rules are unchanged.
 
@@ -66,7 +66,7 @@ Sighash binding: in-frame digest claims sit inside VERIFY data, elided as today.
 
 ## Wallet UX
 
-Wallets surface "this tx will let `<contract>` recognize you as `<address>` via `permit`" before signing. Hardware wallets parse the `PubkeyRegistry` registration tx natively as a one-time onboarding step. First-use registration is a one-time SSTORE-from-zero cost.
+Wallets surface "this tx will let `<contract>` recognize you as `<address>` via `permit`" before signing. Hardware wallets parse the registration tx natively as a one-time onboarding step: `PubkeyRegistry.register(scheme, pubkey)` standalone (one entry per account, no id), or `AuthManager.registerSigner(signer, scheme, pubkey)` aggregated (account picks any non-zero `uint64` `signer` id; `SignerRegistered` is emitted). First-use registration is a one-time SSTORE-from-zero cost.
 
 Permit composition: the wallet adds a binding VERIFY frame whose `digest` matches the EIP-712 hash the contract recomputes; the SENDER frame calls `permit(...)` normally; the contract's internal `ecrecover` resolves via the bound entry.
 
@@ -75,7 +75,7 @@ Permit composition: the wallet adds a binding VERIFY frame whose `digest` matche
 - Block-builder aggregation (defer to PQ stage 2).
 - Cross-tx binding (would expand replay surface).
 - Non-32-byte digests.
-- Rotation outside `PubkeyRegistry.register` + `clear`.
+- Rotation outside the active signer registry's register / clear pair (`PubkeyRegistry.register` + `clear` standalone, `AuthManager.registerSigner` + `clearSigner` aggregated).
 - Inline envelope pubkeys (see [`appendix/system-contracts.md`](system-contracts.md) and [`appendix/pq-analysis.md`](pq-analysis.md)).
 
 ## Spec delta summary
@@ -84,6 +84,6 @@ Permit composition: the wallet adds a binding VERIFY frame whose `digest` matche
 2. Population rule (four conditions above).
 3. `ECRECOVER` extended with hit-path-first lookup; miss-path byte-identical.
 4. `MAX_BOUND_SIGNERS = 8`.
-5. Restrictive-tier admission via one slot read on `PubkeyRegistry`.
+5. Restrictive-tier admission via one slot read on the active signer registry (`PubkeyRegistry` or `AuthManager`).
 
 **Zero new envelope fields, zero new opcodes, zero new precompiles, zero account-encoding changes, zero sighash changes.**

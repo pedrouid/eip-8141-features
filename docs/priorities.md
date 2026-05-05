@@ -21,7 +21,7 @@ Everything else is incremental once that holds.
 
 Native AA changes the consensus surface. It ships through the all-cores upgrade pipeline, with cross-client review, audit, and activation cycles measured in years. EIP-8141 is the upgrade that lifts AA into the protocol. The expansion this repo proposes lands inside that upgrade or not at all.
 
-There is no realistic second opportunity to add a `NonceLaneRegistry` later, no follow-on to slot validity windows into a tx envelope that already shipped, no third pass to retrofit the recovery path. Whatever bundles into this upgrade is what the protocol carries forward.
+There is no realistic second opportunity to add a `NonceManager` later, no follow-on to slot validity windows into a tx envelope that already shipped, no third pass to retrofit the recovery path. Whatever bundles into this upgrade is what the protocol carries forward.
 
 The decision is therefore not which alternative is best in isolation. It is: how many features can be defended in one cross-client review cycle, knowing the upgrade is one-shot.
 
@@ -68,21 +68,13 @@ The registry option lands inside existing snap-sync, witness, and state-tree mac
 
 ## Folding in Flexible nonces
 
-Flexible nonces are presented as a separate feature ([`proposals/flexible-nonces.md`](proposals/flexible-nonces.md)) backed by a dedicated `NonceLaneRegistry`. Under the one-upgrade constraint, a separate registry shipped later is not on the table: it would mean a second consensus rule on tx admission, a second mempool policy, a second RPC, and a second cross-client review cycle, none of which the Ethereum core-dev process is structured to absorb on a per-feature basis.
+Flexible nonces are presented as a separate feature ([`proposals/flexible-nonces.md`](proposals/flexible-nonces.md)) backed by a dedicated `NonceManager`. Under the one-upgrade constraint, a separate registry shipped later is not on the table: it would mean a second consensus rule on tx admission, a second mempool policy, a second RPC, and a second cross-client review cycle, none of which the Ethereum core-dev process is structured to absorb on a per-feature basis.
 
-The only viable path is to fold Flexible nonces into the same `PubkeyRegistry` that signer binding already requires. Each registry entry carries its own 64-bit sequence number; the pubkey selector doubles as the nonce-lane selector, and every registered signer is automatically its own stream.
+The only viable path is to fold Flexible nonces into the same authentication-state contract that signer binding already requires. The merged form is `AuthManager` ([`appendix/system-contracts.md`](appendix/system-contracts.md)): one address, one code-hash, two storage maps both keyed by `(address, signer)` where `signer: uint64` is provided by the account at registration. The standalone `nonce_key` (uint256) becomes `signer` (uint64) in the merged form because every active stream is tied to a registered signer; raw PQ pubkeys are too large to index protocol state directly, so `signer` is the small indirection that points to the entry holding the (potentially kilobyte-scale) pubkey. One canonical contract carries both signer entries and per-signer nonce streams.
 
-```solidity
-struct Entry {
-    uint16 scheme;
-    bytes  pubkey;
-    uint64 seq;     // pubkey-indexed nonce stream
-}
-```
+The pre-tx rule is a single registry consult: check the per-signer sequence, advance it on inclusion. The stream-advance-on-inclusion invariant from [`appendix/guarantors.md`](appendix/guarantors.md) carries over unchanged.
 
-The pre-tx rule becomes a single registry consult: resolve the signer, check the per-entry sequence, advance it on inclusion. The stream-advance-on-inclusion invariant from [`appendix/guarantors.md`](appendix/guarantors.md) carries over unchanged, since advancement is keyed on the bound signer rather than on a free-form `nonce_key`. The same shape works under the account-state-trie variant.
-
-If the upgrade ships signer binding with this `seq` field on day one, Flexible nonces are deliverable. If it ships without, Flexible nonces are not deliverable in this upgrade and not deliverable after it.
+If the upgrade ships signer binding with the nonce side on day one, Flexible nonces are deliverable. Otherwise they are not deliverable in this upgrade and not deliverable after it.
 
 ## Folding in validity windows
 
@@ -95,9 +87,9 @@ Wallet-side mitigations (short-lived intents, refresh on demand) cover most of t
 Under the one-upgrade constraint, the five alternatives in [`overview.md`](overview.md) collapse to three viable bundles:
 
 - **Signer binding**, the minimum requirement. `PubkeyRegistry`, verified-signers table, `ECRECOVER` hit-path-first lookup. No Flexible nonces, no validity windows.
-- **Key lanes**, the middle ground. Signer binding with a per-entry `seq` field, plus the `nonce_key` envelope field and per-lane mempool rules. One registry, two features.
-- **Authorization scopes**, the maximum. Key lanes plus validity windows. The most user-visible bundle achievable in one upgrade.
+- **Key streams**, the middle ground. Signer binding with a per-signer nonce stream, plus the `signer` envelope field (uint64) and per-signer mempool rules. One registry, two features.
+- **Auth scopes**, the maximum. Key streams plus validity windows. The most user-visible bundle achievable in one upgrade.
 
 Standalone **Flexible nonces** and **validity windows** are not viable under this constraint. They ship a tx model that cannot accommodate PQ accounts on day one, and there is no second upgrade in which to add signer binding afterwards. They appear in `overview.md` for completeness; this doc rules them out.
 
-The hierarchy: **Authorization scopes is best, Key lanes is the middle ground, Signer binding is the minimum.** The decision between them is review burden in one cycle, not feature pickability across cycles. Signer binding answers "what must be in this upgrade for EIP-8141 to deliver on its own premise"; Key lanes and Authorization scopes answer "how much more can the same upgrade carry without losing review."
+The hierarchy: **Auth scopes is best, Key streams is the middle ground, Signer binding is the minimum.** The decision between them is review burden in one cycle, not feature pickability across cycles. Signer binding answers "what must be in this upgrade for EIP-8141 to deliver on its own premise"; Key streams and Auth scopes answer "how much more can the same upgrade carry without losing review."

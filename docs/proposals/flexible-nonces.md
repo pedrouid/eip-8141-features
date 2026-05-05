@@ -5,7 +5,7 @@ _Also referred to as **2D nonces**._
 ```
 Status:             research draft
 Depends on:         EIP-8141 + guarantors
-Introduces:         nonce_key envelope field, NonceLaneRegistry
+Introduces:         nonce_key envelope field, NonceManager
 Shared appendices:  system-contracts, mempool-tiers, sighash-binding, guarantors
 ```
 
@@ -17,7 +17,7 @@ Individual alternative. Adds protocol-native parallel nonce streams per account.
 
 Several use cases share a common shape: a single account-wide nonce forces unrelated work to serialise. A stuck or failed tx blocks every later tx; parallel actions queue behind each other; the workaround today is to deploy a smart account or maintain multiple addresses. Flexible nonces let one account run independent sequences in parallel.
 
-**Multi-step workflows.** High-frequency trading bots, market makers, and mass-payout systems (payroll, airdrops, grants) submit many txs in parallel. With one nonce stream, a single stuck or failed tx halts the rest; operators today run sharded addresses or accept the bottleneck. Flexible nonces let each workflow run on its own lane.
+**Multi-step workflows.** High-frequency trading bots, market makers, and mass-payout systems (payroll, airdrops, grants) submit many txs in parallel. With one nonce stream, a single stuck or failed tx halts the rest; operators today run sharded addresses or accept the bottleneck. Flexible nonces let each workflow run on its own stream.
 
 **Privacy pools.** Once EIP-8141 lets contracts originate transactions, a privacy pool (Tornado-style, Aztec-style) becomes a sender in its own right: any member can redeem via the pool. A single account-wide nonce serialises every redemption, forcing members to coordinate ordering. The natural ordering primitive is already the nullifier (one-time-redeemable); Flexible nonces let each nullifier-derived key index its own stream. Mostly relevant to native (contract) accounts, not EOAs, but load-bearing once contracts can originate.
 
@@ -32,18 +32,18 @@ Several use cases share a common shape: a single account-wide nonce forces unrel
 Priorities:
 
 1. One envelope field. Consensus MUST bind the stream key; no account-side signature can cover it.
-2. No account-encoding changes. Lane state lives in a system contract.
+2. No account-encoding changes. Stream state lives in a system contract.
 3. Preserve the legacy `nonce` slot. The existing account `nonce` field holds the sequence on key 0.
 4. Universal EOA coverage on activation day.
 
 Non-goals:
 
-- Pruning or reclamation of lane slots (v2).
+- Pruning or reclamation of stream slots (v2).
 - Custom per-signer scoping logic at consensus (left to default-code design via tx-context).
 
 ## 4. Single-line spec delta
 
-Add envelope field `nonce_key: uint256` (default 0). Deploy `NonceLaneRegistry` at a reserved address. For `nonce_key > 0`, consensus pre-tx system-calls the registry to check-and-advance the sequence. For `nonce_key == 0`, the legacy path is byte-for-byte identical to today.
+Add envelope field `nonce_key: uint256` (default 0). Deploy `NonceManager` at a reserved address. For `nonce_key > 0`, consensus pre-tx system-calls the registry to check-and-advance the sequence. For `nonce_key == 0`, the legacy path is byte-for-byte identical to today.
 
 ## 5. Normative spec
 
@@ -60,16 +60,21 @@ Both envelope-native; `compute_sig_hash` covers them. **MUST NOT** add a sighash
 
 ### Registry
 
-`NonceLaneRegistry` (interface, deployment, immutability, code-hash pinning, first-use cost, why account-RLP was rejected) is specified in [`appendix/system-contracts.md`](../appendix/system-contracts.md).
+`NonceManager` (interface, deployment, immutability, code-hash pinning, first-use cost, why account-RLP was rejected) is specified in [`appendix/system-contracts.md`](../appendix/system-contracts.md).
 
 ### Pre-tx consensus check (MUST)
 
 ```
+# Pre-frame consensus check (equality only)
 if tx.nonce_key == 0:
     require tx.nonce == state[tx.sender].nonce
-    state[tx.sender].nonce += 1
 else:
     require REGISTRY.check(tx.sender, tx.nonce_key, tx.nonce)
+
+# Post-inclusion advance (single point; outside frame rollback)
+if tx.nonce_key == 0:
+    state[tx.sender].nonce = tx.nonce + 1
+else:
     REGISTRY.advance(tx.sender, tx.nonce_key)
 ```
 
@@ -77,12 +82,12 @@ else:
 
 - **Independence.** A gap on key A MUST NOT block key B.
 - **Stream advance on inclusion.** The sequence on a stream MUST advance on successful inclusion regardless of any VERIFY-frame outcome. If sender VERIFY fails on-chain but a guarantor pays, the sequence still advances. Cited from [`appendix/guarantors.md`](../appendix/guarantors.md).
-- **Overflow.** `tx.nonce = 2^64 - 1` is the last valid sequence on a lane; further txs on that lane MUST be rejected. Senders migrate to a new `nonce_key`. _Rationale:_ exhaustion is unreachable in practice (~585 billion years at 1 tx/sec).
+- **Overflow.** `2^64 - 2` is the last valid sequence; `2^64 - 1` is the unreachable terminal so the static check and registry advance never overflow. Senders migrate to a new `nonce_key` before exhaustion (~585 billion years at 1 tx/sec).
 - **Contract-creation address.** Derivation MUST use the legacy `nonce` field (`nonces[0]`) only.
 
 ### Sponsor binding (MUST)
 
-A sponsor signature over a tx MUST bind `(sender, nonce_key, tx.nonce)`. _Rationale:_ a sponsor agreeing to a tx on key 0 must not be replayable as a tx on a different key.
+A sponsor signature over a tx MUST bind `(sender, nonce_key, tx.nonce)`. A sponsor agreeing to a tx on key 0 must not be replayable as a tx on a different key.
 
 ### Account-code visibility
 
@@ -90,11 +95,11 @@ A sponsor signature over a tx MUST bind `(sender, nonce_key, tx.nonce)`. _Ration
 
 ## 6. Mempool behavior
 
-Tier semantics in [`appendix/mempool-tiers.md`](../appendix/mempool-tiers.md). Restrictive-tier admissible: one storage slot read on `NonceLaneRegistry` per touched lane.
+Tier semantics in [`appendix/mempool-tiers.md`](../appendix/mempool-tiers.md). Restrictive-tier admissible: one storage slot read on `NonceManager` per touched stream.
 
 ### Consensus-relevant (MUST)
 
-- **Block-invalidation:** when a block increments any `(sender, nonce_key)` lane, pending txs at the pre-increment sequence on that lane MUST be invalidated by re-validating against the new lane state. (Block-validity follow-on of the consensus pre-tx check.)
+- **Block-invalidation:** when a block increments any `(sender, nonce_key)` stream, pending txs at the pre-increment sequence on that stream MUST be invalidated by re-validating against the new stream state. (Block-validity follow-on of the consensus pre-tx check.)
 - **Sponsor binding:** sponsor signatures MUST bind `(sender, nonce_key, tx.nonce)` (also stated in §5).
 
 ### Node policy (SHOULD)
@@ -113,14 +118,14 @@ Do not overload `eth_getTransactionCount`; its second parameter is already a blo
 
 Error codes: `lane_not_found`, `too_many_active_streams`.
 
-Wallet UX: key 0 shown as "Main sequence #n"; known lanes labeled by wallet convention; unknown lanes flagged; first-use of a non-zero lane warned as extra gas. Common key-selection strategies: app / session keys, admin key (reserved high-bit for recovery), ephemeral keys.
+Wallet UX: key 0 shown as "Main sequence #n"; known keys labeled by wallet convention; unknown keys flagged; first-use of a non-zero key warned as extra gas. Common key-selection strategies: app / session keys, admin key (reserved high-bit for recovery), ephemeral keys.
 
 ## 8. Security and DoS analysis
 
-- **State growth.** Each non-zero lane is one slot in `NonceLaneRegistry`. Adversarial flood: 30 Mgas / 20k SSTORE-from-zero ≈ 1500 lanes/block, ~1 GB/day uncapped. Mempool cap and SSTORE pricing keep realistic growth at ~2 GB/year. Best-guess pending cross-client benchmarks; see open questions.
+- **State growth.** Each non-zero stream is one slot in `NonceManager`. Adversarial flood: 30 Mgas / 20k SSTORE-from-zero ≈ 1500 streams/block, ~1 GB/day uncapped. Mempool cap and SSTORE pricing keep realistic growth at ~2 GB/year. Best-guess pending cross-client benchmarks; see open questions.
 - **Replay across keys.** Sponsor binding (above) closes cross-key replay. Without it a sponsor signature on `(sender, key=0, nonce=n)` would be replayable as `(sender, key=1, nonce=n)`.
-- **Block-invalidation churn.** Per-lane invalidation can cascade if many lanes increment in one block; mempool implementations should recompute readiness per-lane independently (node policy).
-- **Lane squatting.** First-use cost (SSTORE-from-zero, 20 000 gas) economically bounds adversarial allocation. No reclamation in v1.
+- **Block-invalidation churn.** Per-stream invalidation can cascade if many streams increment in one block; mempool implementations should recompute readiness per-stream independently (node policy).
+- **Stream squatting.** First-use cost (SSTORE-from-zero, 20 000 gas) economically bounds adversarial allocation. No reclamation in v1.
 
 ## 9. Compatibility and interactions
 
@@ -135,11 +140,11 @@ Wallet UX: key 0 shown as "Main sequence #n"; known lanes labeled by wallet conv
 
 | # | Question | Status |
 |---|---|---|
-| Q6 | VOPS state-growth budget for `NonceLaneRegistry` | Best-guess pending cross-client benchmarks. Related upstream keyed-nonce tracks: [PR #11584](https://github.com/ethereum/EIPs/pull/11584) and draft EIP-8250 [PR #11598](https://github.com/ethereum/EIPs/pull/11598). |
+| Q6 | VOPS state-growth budget for `NonceManager` | Best-guess pending cross-client benchmarks. Related upstream keyed-nonce tracks: [PR #11584](https://github.com/ethereum/EIPs/pull/11584) and draft EIP-8250 [PR #11598](https://github.com/ethereum/EIPs/pull/11598). |
 
 ## 11. Appendix references
 
-- [`appendix/system-contracts.md`](../appendix/system-contracts.md) for `NonceLaneRegistry` interface, deployment, code-hash pinning, first-use cost, account-RLP rejection.
+- [`appendix/system-contracts.md`](../appendix/system-contracts.md) for `NonceManager` interface, deployment, code-hash pinning, first-use cost, account-RLP rejection.
 - [`appendix/guarantors.md`](../appendix/guarantors.md) for the stream-advance-on-inclusion invariant citation.
 - [`appendix/mempool-tiers.md`](../appendix/mempool-tiers.md) for tier semantics.
 - [`appendix/sighash-binding.md`](../appendix/sighash-binding.md) for Class A binding (envelope placement).
@@ -148,11 +153,11 @@ Wallet UX: key 0 shown as "Main sequence #n"; known lanes labeled by wallet conv
 
 1. Add envelope field `nonce_key: uint256` before the existing `nonce`.
 2. Reinterpret `tx.nonce: uint64` as the sequence within the stream.
-3. Deploy immutable `NonceLaneRegistry` per [`appendix/system-contracts.md`](../appendix/system-contracts.md).
+3. Deploy immutable `NonceManager` per [`appendix/system-contracts.md`](../appendix/system-contracts.md).
 4. Consensus pre-tx rule: non-zero keys system-call `REGISTRY.check` + `REGISTRY.advance`; key 0 legacy path.
 5. Stream advances on inclusion regardless of VERIFY outcome (normative).
 6. First-use cost: SSTORE-from-zero inside registry.
 7. Expose `tx.nonce_key` on default-code tx-context surface.
 8. Sponsor signatures MUST bind `(sender, nonce_key, tx.nonce)`.
 9. RPC: `eth_getTransactionCountByKey`.
-10. Mempool: `MAX_ACTIVE_STREAMS_PER_SENDER = 16`, per-lane RBF, block-invalidation rule.
+10. Mempool: `MAX_ACTIVE_STREAMS_PER_SENDER = 16`, per-stream RBF, block-invalidation rule.

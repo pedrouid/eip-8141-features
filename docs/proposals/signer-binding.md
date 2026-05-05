@@ -34,7 +34,7 @@ Non-goals:
 
 ## 4. Single-line spec delta
 
-Deploy immutable `PubkeyRegistry` at a reserved address. A successful PQ VERIFY frame writes `(digest, frame.target)` into a tx-scoped verified-signers table after resolving the account's pubkey from the registry. `ECRECOVER` consults the table first; hit returns the bound address, miss falls through to existing secp256k1 recovery.
+Deploy immutable `PubkeyRegistry` at a reserved address. A successful PQ VERIFY frame using the binding-payload sub-mode writes `digest -> frame.target` into a tx-scoped verified-signers map after resolving the account's pubkey from the registry. `ECRECOVER` consults the map first; hit returns the bound address, miss falls through to existing secp256k1 recovery. Binding-only frames do not authorize the transaction; tx-auth uses a separate sub-mode that signs `compute_sig_hash(tx)`.
 
 ## 5. Normative spec
 
@@ -50,11 +50,11 @@ The pubkey-size case is exclusive to lattice (897 B-2.6 KB) and multivariate (1.
 
 Lifecycle, population rule, conflict semantics, and modified `ECRECOVER` pseudocode are specified in [`appendix/verified-signers.md`](../appendix/verified-signers.md). Summary:
 
-- Table is tx-scoped: cleared at tx entry, populated during VERIFY, queried during SENDER.
-- A binding VERIFY frame MUST satisfy: `signature_type != 0x0`; carries 32-byte digest + PQ signature; signature verifies under `PubkeyRegistry.get(frame.target)`; calls `APPROVE`.
-- Conflicts (same digest, different address) MUST revert the frame.
+- Table is tx-scoped, shape `map[digest32 -> address]`: cleared at tx entry, populated during VERIFY, queried during SENDER.
+- A binding VERIFY frame MUST use the **binding payload** sub-mode (`sub_mode = 0x01`): `frame.data = [signature_type, 0x01, application_digest (32 B), signature]`. The signature MUST verify under `PubkeyRegistry.get(frame.target)`. The frame MUST NOT call `APPROVE` for any tx-execution, payment, or guarantee scope; binding is its own role. A separate **tx-auth** sub-mode (`sub_mode = 0x00`) is what authorizes tx execution / payment via a signature over `compute_sig_hash(tx)`. The split prevents a PQ signature over an arbitrary application digest from authorizing the transaction itself.
+- Conflicts (same `digest`, different `address`) MUST revert the frame; duplicate inserts of the same `(digest, address)` are no-ops.
 - `ECRECOVER` MUST consult the table first; on miss, MUST fall through to existing secp256k1 recovery byte-identically.
-- Per-tx cap: `MAX_BOUND_SIGNERS = 8` (MUST NOT exceed).
+- Per-tx cap: `MAX_BOUND_SIGNERS = 8` map entries (MUST NOT exceed).
 
 ## 6. Mempool behavior
 

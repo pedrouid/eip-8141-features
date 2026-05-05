@@ -39,7 +39,7 @@ Add envelope fields `valid_after: uint64` and `valid_before: uint64` (unix secon
 ### Envelope
 
 ```
-[chain_id, nonce_key, nonce, sender, frames, fees..., blob_versioned_hashes,
+[chain_id, nonce, sender, frames, fees..., blob_versioned_hashes,
  valid_after, valid_before]
 ```
 

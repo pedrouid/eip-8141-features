@@ -18,13 +18,15 @@ _Single canonical definition per term used in this repo. Each entry tagged `(cur
 
 ## Primitives
 
-**Flexible nonces** _(introduced here; aka **2D nonces**)_. Per-account parallel nonce streams keyed by `nonce_key`. Spec: [`proposals/flexible-nonces.md`](proposals/flexible-nonces.md).
+**Flexible nonces** _(introduced here; aka **2D nonces**)_. Per-account parallel nonce streams. The stream selector is `nonce_key` in the standalone proposal and `signer` in the aggregated proposals. Spec: [`proposals/flexible-nonces.md`](proposals/flexible-nonces.md).
 
-**`nonce_key`** _(introduced here)_. Envelope field, `uint256`, default 0. Selects the nonce stream a tx sequences against. Key 0 is the legacy account-nonce path.
+**`nonce_key`** _(introduced here; standalone Flexible-nonces only)_. Envelope field, `uint256`, default 0. Selects the nonce stream a tx sequences against in `NonceManager`. Key 0 is the legacy account-nonce path.
 
-**Stream / lane** _(introduced here)_. Synonyms for one `(sender, nonce_key)` slot in `NonceLaneRegistry`. "Stream" emphasises the sequence of txs; "lane" emphasises the storage slot. Used interchangeably.
+**`signer`** _(introduced here; Key-streams / Auth-scopes / consolidated EIP)_. Envelope field, `uint64`, default 0. Selects a registered signer entry in `AuthManager` and the per-signer nonce stream. Replaces `nonce_key` in the AuthManager-using proposals because PQ pubkeys are too large to index protocol state directly; `signer` is the small uint64 indirection. Signer 0 is reserved for the legacy ECDSA / account-nonce path.
 
-**`NonceLaneRegistry`** _(introduced here)_. Immutable system contract holding per-account per-key 64-bit sequence numbers. Spec: [`appendix/system-contracts.md`](appendix/system-contracts.md).
+**Stream** _(introduced here)_. One `(sender, stream_selector)` slot of nonce state, where `stream_selector` is `nonce_key` standalone or `signer` aggregated.
+
+**`NonceManager`** _(introduced here)_. Immutable system contract holding per-account per-key 64-bit sequence numbers. Used by the standalone Flexible-nonces alternative. Spec: [`appendix/system-contracts.md`](appendix/system-contracts.md).
 
 **Validity windows** _(introduced here)_. Envelope-level time bounds via `valid_after` / `valid_before`. Spec: [`proposals/validity-windows.md`](proposals/validity-windows.md).
 
@@ -32,9 +34,11 @@ _Single canonical definition per term used in this repo. Each entry tagged `(cur
 
 **Signer binding** _(introduced here)_. Tx-scoped mechanism letting a PQ VERIFY frame bind `(digest, address)` claims that `ECRECOVER` resolves on subsequent calls within the same tx. Spec: [`proposals/signer-binding.md`](proposals/signer-binding.md).
 
-**Verified-signers table** _(introduced here)_. The tx-scoped `set[(digest32, address)]` populated by binding VERIFY frames and queried by `ECRECOVER`. Spec: [`appendix/verified-signers.md`](appendix/verified-signers.md).
+**Verified-signers table** _(introduced here)_. The tx-scoped `map[digest32 -> address]` populated by binding VERIFY frames and queried by `ECRECOVER`. Spec: [`appendix/verified-signers.md`](appendix/verified-signers.md).
 
-**`PubkeyRegistry`** _(introduced here)_. Immutable system contract holding per-account `(scheme, pubkey)` for PQ accounts. Spec: [`appendix/system-contracts.md`](appendix/system-contracts.md).
+**`PubkeyRegistry`** _(introduced here)_. Immutable system contract holding per-account `(scheme, pubkey)` for PQ accounts. Used by the standalone Signer-binding alternative. Spec: [`appendix/system-contracts.md`](appendix/system-contracts.md).
+
+**`AuthManager`** _(introduced here)_. Immutable system contract holding both keyed nonce streams and per-account signer entries `(scheme, pubkey)`. Replaces `NonceManager` + `PubkeyRegistry` in the Key-streams and Auth-scopes alternatives, and in the consolidated [`/eip-8141.md`](../eip-8141.md) execution. Spec: [`appendix/system-contracts.md`](appendix/system-contracts.md). Reference impl: [`assets/eip-8141/AuthManager.sol`](../assets/eip-8141/AuthManager.sol).
 
 **Guarantor** _(adjacent, [PR #11555](https://github.com/ethereum/EIPs/pull/11555))_. A tx-scoped role that commits to paying gas if sender VERIFY fails. Lets shared-state-read risk be priced as economic risk rather than mempool-policy risk. Spec: [`appendix/guarantors.md`](appendix/guarantors.md).
 
@@ -50,7 +54,7 @@ Reference: [`appendix/mempool-tiers.md`](appendix/mempool-tiers.md).
 
 ## Sighash binding analysis _(introduced here)_
 
-**Class A binding**. Protocol-visible data whose validity depends only on the tx (e.g., `nonce_key`, `valid_after`). MUST be covered by the tx sighash; lives in the envelope.
+**Class A binding**. Protocol-visible data whose validity depends only on the tx (e.g., `nonce_key` / `signer`, `valid_after`). MUST be covered by the tx sighash; lives in the envelope.
 
 **Class B binding**. Protocol-visible data whose validity depends on an independent signature chain (e.g., signer-binding claims verified under a registered PQ pubkey). Does not require tx-sighash coverage.
 

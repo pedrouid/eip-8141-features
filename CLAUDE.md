@@ -6,15 +6,17 @@ Instructions for AI agents and contributors working on this repository.
 
 ## Purpose
 
-This repo proposes an **expansion of [EIP-8141](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-8141.md)** (Frame Transaction), the **native AA upgrade** for Ethereum. AA already exists via ERC-4337 and EIP-7702; EIP-8141 lifts AA to the native protocol layer. The proposals here extend that upgrade's scope. Each proposal is iterated against core dev and wallet dev review pressure.
+This repo proposes an **expansion of [EIP-8141](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-8141.md)** (Frame Transaction), the **native AA upgrade** for Ethereum. AA already exists via ERC-4337 and EIP-7702; EIP-8141 lifts AA to the native protocol layer. The repo carries one consolidated proposal and five alternative scopes preserved for comparison. Each is iterated against core dev and wallet dev review pressure.
 
-**`docs/overview.md` does not pick a recommended alternative.** Five neutral alternatives are presented for core devs and wallet devs to weigh. The subjective companion is `docs/priorities.md`, which ranks the alternatives by load-bearing weight under the one-upgrade constraint and rules out standalone Flexible nonces and Validity windows on that basis. The two docs are paired: overview is technical and objective, priorities is product-y and subjective.
+**Canonical artifact:** `eip-8141.md` is the consolidated modified EIP draft, executing the Auth-scopes bundle (guarantors + flexible nonces + signer binding + validity windows) under a single `AuthManager` system contract. `docs/compare.md` is the delta map vs upstream and related PRs.
+
+**Alternatives** under `docs/proposals/` are kept as the comparison surface and as compromise paths if scope shrinks. `docs/overview.md` enumerates them; `docs/priorities.md` argues the load-bearing-weight ranking, ruling out standalone Flexible nonces and Validity windows.
 
 ---
 
 ## Expanded native AA upgrade
 
-EIP-8141 + guarantors + a chosen subset of three independent features:
+EIP-8141 + guarantors + three independent features:
 
 - **Flexible nonces**
 - **Signer binding** (registry-only; inline-envelope path explicitly rejected)
@@ -22,45 +24,56 @@ EIP-8141 + guarantors + a chosen subset of three independent features:
 
 Five alternatives (three individual + two aggregated):
 
-| Alternative | Doc | Features |
-|---|---|---|
-| Flexible nonces | `docs/proposals/flexible-nonces.md` | Flexible nonces |
-| Signer binding | `docs/proposals/signer-binding.md` | Signer binding |
-| Validity windows | `docs/proposals/validity-windows.md` | Validity windows |
-| Key lanes | `docs/proposals/key-lanes.md` | Flexible nonces + signer binding |
-| Authorization scopes | `docs/proposals/authorization-scopes.md` | Flexible nonces + signer binding + validity windows |
+| Alternative | Doc | Features | Registry |
+|---|---|---|---|
+| Flexible nonces | `docs/proposals/flexible-nonces.md` | Flexible nonces | `NonceManager` |
+| Signer binding | `docs/proposals/signer-binding.md` | Signer binding | `PubkeyRegistry` |
+| Validity windows | `docs/proposals/validity-windows.md` | Validity windows | none |
+| Key streams | `docs/proposals/key-streams.md` | Flexible nonces + signer binding | `AuthManager` (merged) |
+| Auth scopes | `docs/proposals/auth-scopes.md` | Flexible nonces + signer binding + validity windows | `AuthManager` (merged) |
+
+The consolidated `eip-8141.md` ships Auth scopes. `AuthManager` is the canonical authentication-state contract carrying both keyed nonce streams and signer registrations under one address, and is what makes a single-contract identity surface possible across any signature scheme (secp256k1, lattice, multivariate, hash-based).
 
 ---
 
 ## Repository structure
 
-Directory-based layout. All proposal docs live under `docs/proposals/`.
-
 ```
+eip-8141.md                 # Consolidated modified EIP draft (executes Auth scopes)
+eip-8141.diff               # Diff against upstream EIPS/eip-8141.md
+
+assets/eip-8141/
+├── AuthManager.sol         # Reference impl of the canonical authentication-state contract
+├── AuthManager.sol.diff
+├── CanonicalPaymaster.sol  # Reference impl with guarantor mode
+└── CanonicalPaymaster.sol.diff
+
 docs/
-├── overview.md             # Read first; covers scope, the five alternatives, and tradeoffs
-├── priorities.md           # Subjective companion; ranks bundles under the one-upgrade constraint
+├── overview.md             # Per-alternative analysis and tradeoffs
+├── priorities.md           # Load-bearing-weight argument; ranks bundles
+├── compare.md              # Delta map for eip-8141.md vs upstream and related PRs
 ├── glossary.md             # Single canonical definition per term
 │
-├── proposals/              # Pick one alternative
+├── proposals/              # Five alternative scopes; consolidated EIP executes Auth scopes
 │   ├── flexible-nonces.md
 │   ├── signer-binding.md
 │   ├── validity-windows.md
-│   ├── key-lanes.md            # Aggregated (Flexible nonces + signer binding)
-│   └── authorization-scopes.md # Aggregated (all three)
+│   ├── key-streams.md            # Aggregated (Flexible nonces + signer binding)
+│   └── auth-scopes.md # Aggregated (all three) -> eip-8141.md
 │
 └── appendix/               # Cross-cutting primitives, shared specs, and grounding analyses
-    ├── guarantors.md           # In every alternative
+    ├── guarantors.md           # Folded into the consolidated EIP
     ├── sighash-binding.md      # Class A/B binding analysis
-    ├── system-contracts.md     # NonceLaneRegistry + PubkeyRegistry: shared spec
+    ├── system-contracts.md     # NonceManager, PubkeyRegistry, AuthManager: shared spec
     ├── verified-signers.md     # Verified-signers table + modified ECRECOVER: shared spec
     ├── mempool-tiers.md        # Restrictive / expansive / private tier semantics
-    └── pq-analysis.md          # NIST PQC + MAYO sizing; reth pipeline grounding
+    ├── pq-analysis.md          # NIST PQC + MAYO sizing; reth pipeline grounding
+    └── test-matrix.md           # Conformance test cases for the consolidated EIP
 ```
 
-**Feature proposals** describe user-facing capabilities with spec deltas. Proposals reference the shared appendix specs rather than duplicating them.
-**Appendix** holds cross-cutting primitives, shared specs (system contracts, verified-signers table + modified ECRECOVER, mempool tiers), and grounding analyses (PQ sizing, reth pipeline). PQ-analysis absorbs scheme-specific detail so proposals stay scheme-agnostic.
-**Top-level docs** are `overview.md` (technical: per-alternative analysis, comparison table, open uncertainties) and `priorities.md` (subjective: ranks the alternatives by load-bearing weight, argues the one-upgrade constraint, names viable bundles).
+**Feature proposals** describe user-facing capabilities with spec deltas, referencing shared appendix specs rather than duplicating them.
+**Appendix** holds cross-cutting primitives, shared specs (system contracts, verified-signers table, mempool tiers), and grounding analyses (PQ sizing, reth pipeline). PQ-analysis absorbs scheme-specific detail so proposals stay scheme-agnostic.
+**Top-level docs** are `eip-8141.md` (consolidated PR-shaped draft), `docs/compare.md` (delta map), `docs/overview.md` (per-alternative analysis), and `docs/priorities.md` (load-bearing-weight ranking).
 
 ---
 
@@ -70,7 +83,7 @@ Principles every proposal follows. **Deviating requires explicit justification i
 
 ### Consensus-level minimalism
 
-1. **No new opcodes.** Express new capability via existing EVM opcodes or protocol-level pre-frame checks.
+1. **No new opcodes beyond the current EIP-8141 set.** Express new capability via existing opcodes or protocol-level pre-frame checks.
 2. **No new precompiles.** System contracts at reserved addresses are preferred when new state or logic is needed.
 3. **No account-encoding changes.** The account RLP encoding (4-tuple: `nonce, balance, storageRoot, codeHash`) must not change. Use the EIP-4788 / EIP-2935 system-contract pattern for new protocol-visible state.
 4. **No core-invariant changes.** Changes to SENDER-frame `msg.sender` semantics, fundamental APPROVE rules, or nonce-consumption rules are out of scope.
@@ -93,69 +106,64 @@ Principles every proposal follows. **Deviating requires explicit justification i
 
 ### Signer binding is registry-only
 
-The `signer-binding.md` proposal (and any aggregated alternative including it) uses the `PubkeyRegistry` system contract as the single source of pubkeys. Inlining pubkeys in the tx envelope is explicitly rejected. The size case is exclusive to lattice (897 B-2.6 KB) and multivariate (1.2-5.5 KB) schemes; hash-based pubkeys (SLH-DSA: 32-64 B) are size-compatible with inlining but registry is still the right call to avoid forking the protocol into two pubkey-resolution paths. The recovery problem (no PQ scheme admits recovery) is what makes a pubkey lookup unavoidable in the first place; registry-vs-envelope is the choice of *how* to expose that lookup. See `docs/appendix/pq-analysis.md`.
+Signer binding uses a canonical signer registry (`PubkeyRegistry` standalone, `AuthManager` aggregated) as the single source of pubkeys. Inline envelope pubkeys are rejected. Recovery is unavailable for any PQ scheme, so a lookup is unavoidable. Lattice (897 B-2.6 KB) and multivariate (1.2-5.5 KB) make inlining impractical on size; for hash-based the case is uniform interface, not size. See `docs/appendix/pq-analysis.md`.
 
 ---
 
 ## Writing style
 
-- **No emojis.** Ever.
-- **Em dashes are restricted.** Allowed only in (a) titles with subtitles, (b) dates attached to a label, (c) list/table topic-description separators. Never as parenthetical brackets, colon substitutes, or inside prose sentences. Rewrite with commas, periods, semicolons, colons, or parentheses.
-- **Avoid `base` terminology.** Do not use "base EIP-8141", "EIP-8141 base", or "baseline" as status/scope labels. Use "current EIP-8141", "current spec", "published spec", "upstream spec", "existing rule", or "shared context" instead.
+- **No emojis.**
+- **Em dashes restricted.** Allowed only in titles with subtitles, labelled dates, or list/table topic separators. Never as parentheticals, colon substitutes, or in prose. Rewrite with commas, periods, semicolons, colons, or parentheses.
+- **Avoid `base` terminology.** Use "current EIP-8141", "current spec", "upstream spec", "existing rule", or "shared context".
 - **Direct and terse.** No filler, no trailing summaries.
-- **No individual author attribution on scratch docs.**
-- **Feature proposals follow**: Priorities → Single-line spec delta → Envelope/state changes → Consensus rules → Mempool rules → RPC → Wallet UX → Interactions with other primitives → Comparison → Non-goals → Spec delta summary.
+- **No author attribution.** No scratch-doc disclaimer.
+- **Feature proposals follow**: Priorities → Single-line spec delta → Envelope/state → Consensus rules → Mempool → RPC → Wallet UX → Interactions → Comparison → Non-goals → Spec delta summary.
 - **Primitive docs follow**: Problem → Design → Invariants → Implications → Spec delta.
+- Every doc opens with `# <Title>`, optionally followed by one italicised context line (e.g., `_Individual alternative._`).
 
-### Cross-cutting additions every proposal should include
+### Cross-cutting additions every proposal includes
 
-- **Mempool-tier classification**, short table or paragraph naming which flows land in restrictive vs. expansive vs. private tiers.
-- **PQ-compatibility note**, one paragraph pointing at `docs/appendix/pq-analysis.md` for scheme-specific data.
-- **FOCIL-compatibility note**, one paragraph citing attester-facing invariants relevant to the proposal.
-- **Stream-advance-on-inclusion rule**, for any proposal including Flexible nonces, pin the normative invariant that the per-stream sequence advances on successful inclusion regardless of VERIFY outcome. Cited from `docs/appendix/guarantors.md`.
-
-### Doc header
-
-Every doc opens with `# <Title>`, optionally followed by a single italicised context line that names the doc's role (e.g., `_Individual alternative._`, `_Cross-cutting binding analysis._`). No author attribution. No scratch-doc disclaimer.
+- Mempool-tier classification (restrictive / expansive / private).
+- PQ-compatibility note pointing at `docs/appendix/pq-analysis.md`.
+- FOCIL-compatibility note.
+- For Flexible-nonces proposals: stream-advance-on-inclusion rule from `docs/appendix/guarantors.md`.
 
 ---
 
 ## Word-count targets
 
-**Every doc has a hard limit of 1400 words, no exceptions.** This applies to overview, proposals (individual and aggregated), primitives, shared specs, and background analyses alike. If a doc would exceed 1400, compress or extract shared content into a new appendix doc before adding new material.
+**`eip-8141.md` is exempt from the 1400-word rule.** It is the consolidated EIP draft; word count is never a reason to trim or compress it. Every other doc has a hard limit of 1400 words; if one would exceed it, compress or extract shared content into a new appendix doc before adding new material.
+
+`eip-8141.md` MUST preserve upstream EIP-8141 verbatim except where additions specifically change it. Never rewrite or compress upstream text.
 
 ---
 
 ## When picking up work
 
-1. Read `docs/overview.md` first; it covers the per-alternative analysis and open uncertainties.
-2. Read `docs/priorities.md` for the opinionated framing: which bundles are viable in one upgrade, what is load-bearing, what folds in, what falls out.
+1. Read `eip-8141.md` and `docs/compare.md` first; they describe the consolidated proposal and what it changes vs upstream.
+2. Read `docs/overview.md` for the per-alternative analysis and open uncertainties; `docs/priorities.md` for the load-bearing-weight ranking under the one-upgrade constraint.
 3. Check [eip8141.io Current Spec](https://eip8141.io/current-spec), [Merged Changes](https://eip8141.io/merged-changes), and active related PRs before changing status-sensitive text.
 4. If working on a specific proposal, read it directly; feedback pressure is already baked in.
 5. Shared specs live in `docs/appendix/`: registry contracts (`system-contracts.md`), verified-signers table + modified ECRECOVER (`verified-signers.md`), mempool tiers (`mempool-tiers.md`), curve data (`pq-analysis.md`). Proposals reference these; don't duplicate them.
+6. Reference contract impls live in `assets/eip-8141/`: `AuthManager.sol`, `CanonicalPaymaster.sol`, plus their `.diff` counterparts against upstream. Update them when consensus-relevant behaviour changes.
 
 ---
 
-## When picking an alternative
+## When changing scope
 
-If an alternative is selected, update in this order to keep the chain of reasoning visible:
+If the consolidated bundle changes (e.g., a feature drops to a smaller alternative), update in this order:
 
-1. The relevant proposal doc (already aligned via the per-alternative content).
-2. `docs/overview.md` if the per-alternative analysis, comparison table, or open-uncertainties section needs to move.
-3. `docs/priorities.md` if the ranking or the viable-bundles list shifts.
-4. `README.md` TL;DR.
-
-The current state of the repo assumes no alternative has been picked.
-
----
+1. `eip-8141.md` and the corresponding `assets/eip-8141/*.sol`.
+2. `docs/compare.md` to keep the delta map honest.
+3. Relevant proposal doc(s) under `docs/proposals/`.
+4. `docs/overview.md` if analysis, comparison table, or open uncertainties move.
+5. `docs/priorities.md` if the ranking shifts.
+6. `README.md` TL;DR.
 
 ## When closing out a research cycle
 
-Before committing:
-
-- Run a consistency pass: grep for stale references (e.g., `lanesRoot` was replaced by `NonceLaneRegistry`, any lingering mention is a bug; envelope `pubkeys` field was removed, any lingering mention is a bug).
-- Verify that `overview.md` open-uncertainties and the proposals agree.
-- Verify no curve-specific names (ML-DSA, Falcon, SLH-DSA, SPHINCS+, MAYO, Dilithium) appear in proposals; those belong in `pq-analysis.md`.
-- Check that no author attributions leaked in and that no doc reintroduces the old scratch-doc disclaimer line in its header.
-- Check no em-dash violations.
-- Check word-count targets.
+- Consistency pass: grep for stale references. Examples: stale `lanesRoot`; stale envelope `pubkeys` field; aggregated proposals + consolidated EIP must use `AuthManager`; standalone Flexible-nonces uses `NonceManager` and standalone Signer-binding uses `PubkeyRegistry`.
+- Verify `overview.md`, proposals, `compare.md`, and `eip-8141.md` agree on names, fields, and constants.
+- No curve-specific names (ML-DSA, Falcon, SLH-DSA, SPHINCS+, MAYO, Dilithium) in proposals; those belong in `pq-analysis.md`.
+- No author attributions, no scratch-doc disclaimer.
+- No em-dashes. Word-count targets met for every doc except `eip-8141.md` (exempt).

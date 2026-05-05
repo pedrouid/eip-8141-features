@@ -2,7 +2,7 @@
 
 ```
 Canonical for:  Class A vs Class B binding analysis
-Referenced by:  Flexible nonces, Validity windows, Key lanes, Authorization scopes
+Referenced by:  Flexible nonces, Validity windows, Key streams, Auth scopes
 ```
 
 _Cross-cutting binding analysis; relevant to any alternative that adds protocol-visible data._
@@ -11,7 +11,7 @@ _Cross-cutting binding analysis; relevant to any alternative that adds protocol-
 
 EIP-8141's `compute_sig_hash` elides VERIFY frame data. This is load-bearing: the default-code signature lives in VERIFY calldata, so it cannot be part of its own hash.
 
-Earlier Flexible-nonces drafts placed protocol-visible data inside VERIFY calldata (a 40-byte `(nonce_key, nonce_seq)` prefix). The elision means none of it is bound by the transaction signature; an attacker with the signed bytes could rewrite the prefix and still produce a valid `tx.signature`. Correctness bug, not a style concern.
+Earlier Flexible-nonces drafts placed protocol-visible data inside VERIFY calldata (a 40-byte `(nonce_key, nonce)` prefix). The elision means none of it is bound by the transaction signature; an attacker with the signed bytes could rewrite the prefix and still produce a valid `tx.signature`. Correctness bug, not a style concern.
 
 This doc resolves the binding for protocol-visible data added by the proposals.
 
@@ -34,7 +34,7 @@ Two viable designs were considered for Flexible nonces:
 - **A1.** Structured VERIFY layout: `VERIFY.data = [protocol_prefix][sig_type][sig_payload]`. Change `compute_sig_hash` to elide only `[sig_type][sig_payload]`. Prefix is covered.
   - Pro: extensible for future protocol-visible VERIFY data.
   - Con: every default-code impl updates to skip prefix; conflicts with existing `signature_type` byte; bigger consensus surface.
-- **A2.** Envelope field `nonce_key: uint256`; `tx.nonce` stays as the sequence. Consensus check: `tx.nonce == NonceLaneRegistry.get(tx.sender, tx.nonce_key)`.
+- **A2.** Envelope stream selector (`nonce_key: uint256` standalone, `signer: uint64` aggregated); `tx.nonce` stays as the sequence. Consensus check: `tx.nonce == NonceManager.get(tx.sender, tx.nonce_key)` standalone or `tx.nonce == AuthManager.getNonce(tx.sender, tx.signer)` aggregated.
   - Pro: covered by existing sighash for free.
   - Pro: one RLP field, no VERIFY-layout change, no signature-type conflict.
   - Pro: matches Tempo.
@@ -52,7 +52,7 @@ Signer binding claims `(digest, address)` ahead of `ECRECOVER` execution. The cl
 ## Protocol affordances required
 
 For Class A (Flexible nonces, validity windows):
-- Envelope fields `nonce_key`, `valid_after`, `valid_before`.
+- Envelope fields: `nonce_key` (standalone) or `signer` (aggregated); `valid_after`; `valid_before`.
 - Protocol pre-tx checks updated.
 - No sighash rule change. No VERIFY-layout change.
 
@@ -64,7 +64,7 @@ For Class B (signer binding):
 
 | Data | Class | Binding | Sighash change? | Envelope change? |
 |---|---|---|---|---|
-| Flexible-nonce key | A | Envelope `nonce_key`, covered by existing sighash | No | Yes, one field |
+| Flexible-nonce stream selector | A | Envelope `nonce_key` (standalone) / `signer` (aggregated), covered by existing sighash | No | Yes, one field |
 | Validity bounds | A | Envelope `valid_after` / `valid_before`, covered by existing sighash | No | Yes, two fields |
 | Signer binding `(digest, address)` claim | B | PQ signature over pubkey at VERIFY time | No | No |
 

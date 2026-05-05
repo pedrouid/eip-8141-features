@@ -25,26 +25,26 @@ The design discipline behind every alternative is to keep its added flow restric
 
 | Flow | Tier |
 |---|---|
-| Flexible nonces (`nonce_key > 0`): `NonceLaneRegistry.check` is one slot read | Restrictive |
+| Flexible nonces, non-zero stream selector: one slot read on the active registry (`NonceManager.check(sender, nonce_key)` standalone, or `AuthManager.checkNonce(sender, signer)` aggregated) | Restrictive |
 | Validity windows: `valid_after`, `valid_before` deterministic from envelope | Restrictive |
 | Validity windows beyond tier horizon | Expansive (24 h) or direct-to-builder (unlimited) |
-| Signer binding: `PubkeyRegistry.get` is one slot read | Restrictive (PQ verify gas absorbed by 100 k prefix once stage-2 PQ precompiles ship; expansive before then) |
+| Signer binding: one slot read on the active registry (`PubkeyRegistry.get` standalone, or `AuthManager.getSigner` in aggregated proposals) | Restrictive (PQ verify gas absorbed by 100 k prefix once stage-2 PQ precompiles ship; expansive before then) |
 | Guarantors: guarantor VERIFY restrictive; sender-VERIFY simulation skippable | Restrictive |
 
 ## Restrictive-tier reads each feature adds
 
 | Feature | New restrictive-tier reads |
 |---|---|
-| Flexible nonces | One slot per touched `(sender, nonce_key)` lane on `NonceLaneRegistry`. |
+| Flexible nonces | Standalone: one slot per touched `(sender, nonce_key)` stream on `NonceManager`. Aggregated: one slot per touched `(sender, signer)` stream on `AuthManager`. |
 | Signer binding | One slot per binding VERIFY frame on `PubkeyRegistry`. |
 | Validity windows | None (pure envelope check). |
 | Guarantors | Guarantor's own VERIFY must itself fit restrictive-tier rules. |
 
-Aggregated alternatives (`key-lanes`, `authorization-scopes`) sum the above.
+Aggregated alternatives (`key-streams`, `auth-scopes`) sum the above. Both reads land on `AuthManager` instead of two separate registries; cost is identical (one slot per side).
 
 ## Caps that protect restrictive admission
 
-- `MAX_ACTIVE_STREAMS_PER_SENDER = 16` (Flexible nonces): bounds non-zero-key txs per sender in public mempool.
+- `MAX_ACTIVE_STREAMS_PER_SENDER = 16` (Flexible nonces standalone) / `MAX_ACTIVE_SIGNERS_PER_SENDER = 16` (aggregated): bounds non-zero-stream txs per sender in public mempool.
 - `MAX_BOUND_SIGNERS = 8` (signer binding): bounds verified-signers-table population per tx.
 - Tiered validity-window deferral (validity windows): public mempool 1 h; expansive 24 h; direct-to-builder unlimited.
 - `GOSSIP_THRESHOLD = 60 s` (validity windows): future-valid txs held locally until within threshold of `valid_after`.
@@ -53,9 +53,9 @@ Aggregated alternatives (`key-lanes`, `authorization-scopes`) sum the above.
 
 Both rules cut across tiers and apply identically:
 
-- **RBF**: matches `(sender, nonce_key, tx.nonce)`. Replacement must satisfy its own validity window if windows are in scope.
-- **Block-invalidation**: when a block increments any `(sender, nonce_key)` lane, pending txs at the pre-increment sequence on that lane are invalidated.
+- **RBF**: matches `(sender, stream_selector, tx.nonce)` where `stream_selector` is `nonce_key` (standalone) or `signer` (aggregated). Replacement must satisfy its own validity window if windows are in scope.
+- **Block-invalidation**: when a block increments any `(sender, stream_selector)` stream, pending txs at the pre-increment sequence on that stream are invalidated.
 
 ## FOCIL note
 
-FOCIL (the inclusion-list mechanism) places attester-facing constraints on mempool determinism. Every restrictive-tier flow described here is FOCIL-friendly by construction: deterministic from envelope or one bounded storage read, no environmental opcodes during validation. Cross-client tests on per-lane RBF and the lane + window interaction in aggregated alternatives are a known follow-up.
+FOCIL (the inclusion-list mechanism) places attester-facing constraints on mempool determinism. Every restrictive-tier flow described here is FOCIL-friendly by construction: deterministic from envelope or one bounded storage read, no environmental opcodes during validation. Cross-client tests on per-stream RBF and the stream + window interaction in aggregated alternatives are a known follow-up.
