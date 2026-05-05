@@ -2,7 +2,7 @@
 
 ```
 Canonical for:  alternative ranking; load-bearing-weight argument; viable bundles under one-upgrade constraint
-Referenced by:  README.md (TL;DR + how-to-review); CLAUDE.md (top-level docs); overview.md (companion link); S, NS, NSW (ranked-as labels)
+Referenced by:  README.md (TL;DR + how-to-review); CLAUDE.md (top-level docs); overview.md (companion link)
 ```
 
 _Subjective companion to [`overview.md`](overview.md). Where the overview enumerates the five alternatives neutrally, this doc takes a position: what is load-bearing, what is reducible, and which bundles are viable under the one-upgrade constraint. Reads as the minimum requirement, the middle ground, and the maximum that fits in one upgrade._
@@ -94,10 +94,10 @@ Wallet-side mitigations (short-lived intents, refresh on demand) cover most of t
 
 Under the one-upgrade constraint, the five alternatives in [`overview.md`](overview.md) collapse to three viable bundles:
 
-- **S (signer binding)**, the minimum requirement. `PubkeyRegistry`, verified-signers table, `ECRECOVER` hit-path-first lookup. No Flexible nonces, no validity windows.
-- **NS (key lanes)**, the middle ground. Signer binding with a per-entry `seq` field, plus the `nonce_key` envelope field and per-lane mempool rules. One registry, two features.
-- **NSW (authorization scopes)**, the maximum. NS plus validity windows. The most user-visible bundle achievable in one upgrade.
+- **Signer binding**, the minimum requirement. `PubkeyRegistry`, verified-signers table, `ECRECOVER` hit-path-first lookup. No Flexible nonces, no validity windows.
+- **Key lanes**, the middle ground. Signer binding with a per-entry `seq` field, plus the `nonce_key` envelope field and per-lane mempool rules. One registry, two features.
+- **Authorization scopes**, the maximum. Key lanes plus validity windows. The most user-visible bundle achievable in one upgrade.
 
-Standalone **N** (Flexible nonces only) and **W** (validity windows only) are not viable under this constraint. They ship a tx model that cannot accommodate PQ accounts on day one, and there is no second upgrade in which to add signer binding afterwards. They appear in `overview.md` for completeness; this doc rules them out.
+Standalone **Flexible nonces** and **validity windows** are not viable under this constraint. They ship a tx model that cannot accommodate PQ accounts on day one, and there is no second upgrade in which to add signer binding afterwards. They appear in `overview.md` for completeness; this doc rules them out.
 
-The hierarchy: **NSW is best, NS is the middle ground, S is the minimum.** The decision between them is review burden in one cycle, not feature pickability across cycles. S is the answer to "what must be in this upgrade for EIP-8141 to deliver on its own premise"; NS and NSW are answers to "how much more can the same upgrade carry without losing review."
+The hierarchy: **Authorization scopes is best, Key lanes is the middle ground, Signer binding is the minimum.** The decision between them is review burden in one cycle, not feature pickability across cycles. Signer binding answers "what must be in this upgrade for EIP-8141 to deliver on its own premise"; Key lanes and Authorization scopes answer "how much more can the same upgrade carry without losing review."

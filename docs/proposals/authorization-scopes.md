@@ -2,7 +2,6 @@
 
 ```
 Status:             research draft
-Alternative ID:     NSW
 Depends on:         EIP-8141 + guarantors
 Introduces:         nonce_key, valid_after, valid_before envelope fields;
                     NonceLaneRegistry, PubkeyRegistry; verified-signers table;
@@ -13,7 +12,7 @@ Shared appendices:  system-contracts, verified-signers, mempool-tiers,
 
 ## 1. Status and scope
 
-Aggregated alternative. All three features in one upgrade: Flexible nonces (N) + signer binding (S) + validity windows (W). This doc is the merged spec; sections labelled **Inherited from §X** restate component content, sections labelled **New** cover the cross-feature analysis. Constraints respected (no new opcodes, precompiles, frame modes, account-encoding changes, sighash changes) are listed in [`docs/overview.md`](../overview.md). Identified as the maximum viable bundle in [`docs/priorities.md`](../priorities.md).
+Aggregated alternative. All three features in one upgrade: Flexible nonces + signer binding + validity windows. This doc is the merged spec; sections labelled **Inherited from §X** restate component content, sections labelled **New** cover the cross-feature analysis. Constraints respected (no new opcodes, precompiles, frame modes, account-encoding changes, sighash changes) are listed in [`docs/overview.md`](../overview.md). Identified as the maximum viable bundle in [`docs/priorities.md`](../priorities.md).
 
 ## 2. Motivation
 
@@ -125,7 +124,7 @@ Error codes:
 Wallet UX:
 
 - **Windows:** local-time equivalents alongside timestamps; relative duration; warn on unusually long, already-expired, or reverse windows.
-- **Lanes:** key 0 as "Main sequence #N"; known lanes labeled; first-use surcharge warned.
+- **Lanes:** key 0 as "Main sequence #n"; known lanes labeled; first-use surcharge warned.
 - **Signer binding:** one-time pubkey registration onboarding; per-tx surfacing of "recognized via `permit`."
 
 ## 8. Security and DoS analysis
@@ -161,7 +160,7 @@ Per-feature analyses in components apply. **New** cross-feature considerations:
 - [`appendix/guarantors.md`](../appendix/guarantors.md) for stream-advance invariant.
 - [`appendix/pq-analysis.md`](../appendix/pq-analysis.md) for scheme sizes.
 
-## 12. Spec delta summary
+## 12. EIP-ready delta
 
 1. Envelope: add `nonce_key`, `valid_after`, `valid_before`.
 2. Reinterpret `tx.nonce` as per-stream sequence.

@@ -2,7 +2,6 @@
 
 ```
 Status:             research draft
-Alternative ID:     W
 Depends on:         EIP-8141 + guarantors
 Introduces:         valid_after envelope field, valid_before envelope field
 Shared appendices:  mempool-tiers, sighash-binding
@@ -101,7 +100,7 @@ Wallet display (non-normative):
 
 - **Public-mempool buffer size.** Tiered deferral horizon (1 h public, 24 h expansive) bounds how many future-valid txs a node retains, capping memory and bandwidth pressure.
 - **Replay against expired signatures.** A signed tx with `valid_before` set is no longer includable past that timestamp, even if the signer never sent a replacement. Replaces ad-hoc deadline parsing in app contracts.
-- **MEV / auction contention.** Tight `valid_before` lets wallets express "land in the next N seconds or fail," reducing stale execution risk after market moves.
+- **MEV / auction contention.** Tight `valid_before` lets wallets express "land in the next n seconds or fail," reducing stale execution risk after market moves.
 - **Reverse-window safety.** Reverse windows are consensus-invalid (§5). Nodes drop them before propagation as a node-policy follow-on, removing a class of always-invalid txs from gossip.
 
 ## 9. Compatibility and interactions
@@ -123,7 +122,7 @@ None block this proposal. Q1 (deferral horizon) and Q2 (`GOSSIP_THRESHOLD`) are 
 - [`appendix/sighash-binding.md`](../appendix/sighash-binding.md) for Class A binding (envelope placement).
 - [`appendix/mempool-tiers.md`](../appendix/mempool-tiers.md) for tier semantics.
 
-## 12. Spec delta summary
+## 12. EIP-ready delta
 
 1. Add envelope fields `valid_after: uint64`, `valid_before: uint64`; zero = no bound for both.
 2. Consensus check at tx entry: strict `>` lower, strict `<` upper. Reverse windows invalid.

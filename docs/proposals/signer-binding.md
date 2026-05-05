@@ -2,7 +2,6 @@
 
 ```
 Status:             research draft
-Alternative ID:     S
 Depends on:         EIP-8141 + guarantors
 Introduces:         PubkeyRegistry, verified-signers table, modified ECRECOVER
 Shared appendices:  system-contracts, verified-signers, mempool-tiers, sighash-binding, pq-analysis
@@ -114,7 +113,7 @@ None block this proposal.
 - [`appendix/mempool-tiers.md`](../appendix/mempool-tiers.md) for tier semantics.
 - [`appendix/sighash-binding.md`](../appendix/sighash-binding.md) for Class B reasoning.
 
-## 12. Spec delta summary
+## 12. EIP-ready delta
 
 1. Deploy immutable `PubkeyRegistry` per [`appendix/system-contracts.md`](../appendix/system-contracts.md).
 2. Tx-scoped verified-signers table per [`appendix/verified-signers.md`](../appendix/verified-signers.md).

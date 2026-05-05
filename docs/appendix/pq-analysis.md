@@ -2,7 +2,7 @@
 
 ```
 Canonical for:  NIST PQC + MAYO-2 sizing; reth pipeline grounding for PQ identity
-Referenced by:  S, NS, NSW
+Referenced by:  Signer binding, Key lanes, Authorization scopes
 ```
 
 _Background analysis grounding signer binding in the actual implementation surface of reth. All curve-specific sizing and scheme tradeoffs live here so the proposals can stay scheme-agnostic. Cited by [`signer-binding.md`](../proposals/signer-binding.md), [`key-lanes.md`](../proposals/key-lanes.md), [`authorization-scopes.md`](../proposals/authorization-scopes.md)._
@@ -13,7 +13,7 @@ Five facts from the reth codebase shape the problem:
 
 1. **The transaction envelope carries no sender.** `TransactionSigned` (`crates/ethereum/primitives/src/lib.rs`) holds `(v, r, s)` only; "from" is *derived* from the signature, never transmitted, never stored. Every consumer assumes `recover_signer(tx) -> Address` is total and cheap-ish.
 2. **A whole pipeline stage exists to amortise recovery.** `SenderRecoveryStage` (`crates/stages/stages/src/stages/sender_recovery.rs`) runs ECDSA recovery over every historical tx in 100-tx rayon chunks and writes results to a dedicated 28-byte-per-row `TransactionSenders` table. Recovery is reth's most expensive per-tx CPU cost outside of EVM itself.
-3. **`RecoveredBlock<B>` is the canonical shape passed into execution.** Engine, payload builder, RPC, tx-pool maintainer — all pass block + senders bundled because the executor must not redo recovery per-call.
+3. **`RecoveredBlock<B>` is the canonical shape passed into execution.** Engine, payload builder, RPC, and tx-pool maintainer all pass block + senders bundled because the executor must not redo recovery per-call.
 4. **The 0x01 precompile returns 20 bytes (address), not a pubkey,** because the ABI was designed around recovery. Smart contracts (EIP-712, permit, multisigs, EIP-1271 fallbacks) all call it.
 5. **Address ↔ key is one-way.** `address = keccak256(pubkey)[12:]`. Given an address you cannot get the pubkey. The recovery property of secp256k1 ECDSA is what makes this asymmetry tolerable.
 

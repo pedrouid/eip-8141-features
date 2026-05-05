@@ -2,7 +2,7 @@
 
 ```
 Canonical for:  NonceLaneRegistry, PubkeyRegistry
-Referenced by:  N, S, NS, NSW
+Referenced by:  Flexible nonces, Signer binding, Key lanes, Authorization scopes
 ```
 
 _Canonical specs for the two system contracts introduced by the alternatives. Single source of truth referenced by [`proposals/flexible-nonces.md`](../proposals/flexible-nonces.md), [`proposals/signer-binding.md`](../proposals/signer-binding.md), [`proposals/key-lanes.md`](../proposals/key-lanes.md), and [`proposals/authorization-scopes.md`](../proposals/authorization-scopes.md)._

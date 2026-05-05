@@ -4,7 +4,6 @@ _Also referred to as **2D nonces**._
 
 ```
 Status:             research draft
-Alternative ID:     N
 Depends on:         EIP-8141 + guarantors
 Introduces:         nonce_key envelope field, NonceLaneRegistry
 Shared appendices:  system-contracts, mempool-tiers, sighash-binding, guarantors
@@ -114,12 +113,12 @@ Do not overload `eth_getTransactionCount`; its second parameter is already a blo
 
 Error codes: `lane_not_found`, `too_many_active_streams`.
 
-Wallet UX: key 0 shown as "Main sequence #N"; known lanes labeled by wallet convention; unknown lanes flagged; first-use of a non-zero lane warned as extra gas. Common key-selection strategies: app / session keys, admin key (reserved high-bit for recovery), ephemeral keys.
+Wallet UX: key 0 shown as "Main sequence #n"; known lanes labeled by wallet convention; unknown lanes flagged; first-use of a non-zero lane warned as extra gas. Common key-selection strategies: app / session keys, admin key (reserved high-bit for recovery), ephemeral keys.
 
 ## 8. Security and DoS analysis
 
 - **State growth.** Each non-zero lane is one slot in `NonceLaneRegistry`. Adversarial flood: 30 Mgas / 20k SSTORE-from-zero ≈ 1500 lanes/block, ~1 GB/day uncapped. Mempool cap and SSTORE pricing keep realistic growth at ~2 GB/year. Best-guess pending cross-client benchmarks; see open questions.
-- **Replay across keys.** Sponsor binding (above) closes cross-key replay. Without it a sponsor signature on `(sender, key=0, nonce=N)` would be replayable as `(sender, key=1, nonce=N)`.
+- **Replay across keys.** Sponsor binding (above) closes cross-key replay. Without it a sponsor signature on `(sender, key=0, nonce=n)` would be replayable as `(sender, key=1, nonce=n)`.
 - **Block-invalidation churn.** Per-lane invalidation can cascade if many lanes increment in one block; mempool implementations should recompute readiness per-lane independently (node policy).
 - **Lane squatting.** First-use cost (SSTORE-from-zero, 20 000 gas) economically bounds adversarial allocation. No reclamation in v1.
 
@@ -145,7 +144,7 @@ Wallet UX: key 0 shown as "Main sequence #N"; known lanes labeled by wallet conv
 - [`appendix/mempool-tiers.md`](../appendix/mempool-tiers.md) for tier semantics.
 - [`appendix/sighash-binding.md`](../appendix/sighash-binding.md) for Class A binding (envelope placement).
 
-## 12. Spec delta summary
+## 12. EIP-ready delta
 
 1. Add envelope field `nonce_key: uint256` before the existing `nonce`.
 2. Reinterpret `tx.nonce: uint64` as the sequence within the stream.

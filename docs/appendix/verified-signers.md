@@ -2,7 +2,7 @@
 
 ```
 Canonical for:  verified-signers table, modified ECRECOVER (hit-path-first lookup)
-Referenced by:  S, NS, NSW
+Referenced by:  Signer binding, Key lanes, Authorization scopes
 ```
 
 _Canonical specification of the tx-scoped verified-signers table and the modified `ECRECOVER` semantics that back **signer binding**. Single source of truth referenced by [`signer-binding.md`](../proposals/signer-binding.md), [`key-lanes.md`](../proposals/key-lanes.md), and [`authorization-scopes.md`](../proposals/authorization-scopes.md). Background and registry state in [`appendix/system-contracts.md`](system-contracts.md) and [`appendix/pq-analysis.md`](pq-analysis.md)._

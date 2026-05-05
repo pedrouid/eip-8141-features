@@ -2,7 +2,7 @@
 
 ```
 Canonical for:  Class A vs Class B binding analysis
-Referenced by:  N, W, NS, NSW
+Referenced by:  Flexible nonces, Validity windows, Key lanes, Authorization scopes
 ```
 
 _Cross-cutting binding analysis; relevant to any alternative that adds protocol-visible data._

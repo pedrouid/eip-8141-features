@@ -57,7 +57,3 @@ Reference: [`appendix/mempool-tiers.md`](appendix/mempool-tiers.md).
 **Class B binding**. Protocol-visible data whose validity depends on an independent signature chain (e.g., signer-binding claims verified under a registered PQ pubkey). Does not require tx-sighash coverage.
 
 Reference: [`appendix/sighash-binding.md`](appendix/sighash-binding.md).
-
-## Repo conventions
-
-**Alternative ID**. `N` (Flexible nonces), `S` (signer binding), `W` (validity windows), `NS` (key lanes), `NSW` (authorization scopes). See [`overview.md`](overview.md).

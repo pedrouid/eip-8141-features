@@ -8,11 +8,12 @@ Account abstraction already exists on Ethereum via ERC-4337 (above the protocol)
 
 ## How to review this repo
 
-1. Read `README.md` for scope and the repository map.
-2. Read `docs/overview.md` for the alternative set and comparison table (technical, objective).
-3. Read `docs/priorities.md` for the opinionated framing: which bundles are viable in one upgrade, what is load-bearing, what folds in (subjective companion to the overview).
-4. Pick one alternative and read only its proposal doc.
-5. Read the appendix files referenced by that proposal.
+This repo is research and scope material intended to inform an EIP-8141 expansion. It is not itself the EIP text.
+
+- **Core devs:** read `docs/overview.md`, then the selected proposal, then the appendix specs it references.
+- **Wallet devs:** read this README, `docs/priorities.md`, and the proposal RPC and wallet UX sections.
+- **Infra devs:** read `docs/appendix/mempool-tiers.md`, `docs/appendix/system-contracts.md`, and the proposal RPC sections.
+- **App devs:** read the proposal wallet UX and compatibility sections.
 
 Terminology used across the docs is defined once in `docs/glossary.md`.
 
@@ -20,7 +21,15 @@ Terminology used across the docs is defined once in `docs/glossary.md`.
 
 ## TL;DR
 
-The proposals expand the scope of the existing EIP-8141 upgrade. They ship in the same activation as EIP-8141, adding guarantors plus a chosen subset of three independent features:
+Status legend:
+
+- **Base EIP-8141:** external upstream spec.
+- **Guarantors:** pending companion feature, tracked separately and assumed to land in parallel.
+- **Flexible nonces, signer binding, validity windows:** expansion proposals from this repo.
+
+Guarantors are not part of the current published EIP-8141 spec. They are a pending companion feature, tracked separately, and this repo assumes they land in parallel with whichever expansion alternative is selected.
+
+The proposals expand the scope of the existing EIP-8141 upgrade. They ship in the same activation as EIP-8141, adding guarantors as baseline context plus a chosen subset of three independent expansion features:
 
 - **Flexible nonces**, protocol-native parallel nonce streams.
 - **Signer binding**, registry-backed PQ identity for `ECRECOVER` callers.
@@ -37,6 +46,8 @@ The proposals are presented as **five neutral alternatives**: three individual a
 | Authorization scopes | `docs/proposals/authorization-scopes.md` | Flexible nonces + signer binding + validity windows |
 
 Every alternative ships guarantors (PR #11555) as the small mempool primitive that confirms the stream-advance invariant and unlocks public-mempool ERC-20 paymasters.
+
+Flexible nonces, Key lanes, and Authorization scopes are complementary to Guarantors: they reduce contention, isolate sponsorship flows, and bound authorization risk, which makes Guarantors more viable in public mempools.
 
 See [`docs/overview.md`](docs/overview.md) for the per-alternative analysis and open uncertainties. See [`docs/priorities.md`](docs/priorities.md) for the opinionated take on which bundles are viable under the one-upgrade constraint.
 

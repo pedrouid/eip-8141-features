@@ -2,7 +2,6 @@
 
 ```
 Status:             research draft
-Alternative ID:     NS
 Depends on:         EIP-8141 + guarantors
 Introduces:         nonce_key envelope field, NonceLaneRegistry, PubkeyRegistry,
                     verified-signers table, modified ECRECOVER
@@ -12,7 +11,7 @@ Shared appendices:  system-contracts, verified-signers, mempool-tiers,
 
 ## 1. Status and scope
 
-Aggregated alternative. Lands Flexible nonces (N) and signer binding (S) in one upgrade. This doc is the merged spec; sections labelled **Inherited from §X** restate component content for completeness, sections labelled **New** cover the cross-feature analysis. Constraints respected (no new opcodes, precompiles, frame modes, account-encoding changes, sighash changes) are listed in [`docs/overview.md`](../overview.md). Identified as the middle ground in [`docs/priorities.md`](../priorities.md).
+Aggregated alternative. Lands Flexible nonces and signer binding in one upgrade. This doc is the merged spec; sections labelled **Inherited from §X** restate component content for completeness, sections labelled **New** cover the cross-feature analysis. Constraints respected (no new opcodes, precompiles, frame modes, account-encoding changes, sighash changes) are listed in [`docs/overview.md`](../overview.md). Identified as the middle ground in [`docs/priorities.md`](../priorities.md).
 
 ## 2. Motivation
 
@@ -115,7 +114,7 @@ Error codes:
 
 Wallet UX:
 
-- **Lanes:** key 0 shown as "Main sequence #N"; known lanes labeled by wallet convention; first-use of a non-zero lane warned for the SSTORE-from-zero surcharge.
+- **Lanes:** key 0 shown as "Main sequence #n"; known lanes labeled by wallet convention; first-use of a non-zero lane warned for the SSTORE-from-zero surcharge.
 - **Signer binding:** one-time onboarding flow registers the account's PQ pubkey via a SENDER frame to `PubkeyRegistry`. Subsequent txs surface "this tx will let `<contract>` recognize you as `<address>` via `permit`" before signing.
 
 ## 8. Security and DoS analysis
@@ -128,7 +127,7 @@ Per-feature analyses in [`flexible-nonces.md`](flexible-nonces.md) §8 and [`sig
 
 ## 9. Compatibility and interactions
 
-- **Validity windows** (if also adopted, e.g., as NSW): orthogonal. Future-valid tx holds its stream position until lands or expires; the verified-signers table is rebuilt per-tx.
+- **Validity windows** (if also adopted, as in Authorization scopes): orthogonal. Future-valid tx holds its stream position until lands or expires; the verified-signers table is rebuilt per-tx.
 - **Guarantors:** confirms stream-advance invariant; orthogonal to signer binding.
 - **Sighash binding:** Flexible-nonce key bound by envelope placement (Class A); binding digests sit in elided VERIFY data, integrity covered by signature-over-pubkey check (Class B). See [`appendix/sighash-binding.md`](../appendix/sighash-binding.md).
 - **vs. shipping each individually across upgrades:** same protocol surface, one upgrade's review effort, shared system-contract precedent, shared mempool reasoning.
@@ -149,7 +148,7 @@ Per-feature analyses in [`flexible-nonces.md`](flexible-nonces.md) §8 and [`sig
 - [`appendix/guarantors.md`](../appendix/guarantors.md) for stream-advance invariant.
 - [`appendix/pq-analysis.md`](../appendix/pq-analysis.md) for scheme sizes and registry-only argument.
 
-## 12. Spec delta summary
+## 12. EIP-ready delta
 
 1. Envelope: add `nonce_key: uint256` before `nonce`.
 2. Reinterpret `tx.nonce: uint64` as per-stream sequence.

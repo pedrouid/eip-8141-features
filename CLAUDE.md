@@ -8,7 +8,7 @@ Instructions for AI agents and contributors working on this repository.
 
 This repo proposes an **expansion of [EIP-8141](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-8141.md)** (Frame Transaction), the **native AA upgrade** for Ethereum. AA already exists via ERC-4337 and EIP-7702; EIP-8141 lifts AA to the native protocol layer. The proposals here extend that upgrade's scope. Each proposal is iterated against core dev and wallet dev review pressure.
 
-**`docs/overview.md` does not pick a recommended alternative.** Five neutral alternatives are presented for core devs and wallet devs to weigh. The subjective companion is `docs/priorities.md`, which ranks the alternatives by load-bearing weight under the one-upgrade constraint and rules out standalone N and W on that basis. The two docs are paired: overview is technical and objective, priorities is product-y and subjective.
+**`docs/overview.md` does not pick a recommended alternative.** Five neutral alternatives are presented for core devs and wallet devs to weigh. The subjective companion is `docs/priorities.md`, which ranks the alternatives by load-bearing weight under the one-upgrade constraint and rules out standalone Flexible nonces and Validity windows on that basis. The two docs are paired: overview is technical and objective, priorities is product-y and subjective.
 
 ---
 
