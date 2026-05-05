@@ -1,20 +1,20 @@
 # Glossary
 
-_Single canonical definition per term used in this repo. Each entry tagged `(EIP-8141 base)` if the concept comes from EIP-8141 itself, `(introduced here)` if it is added by a proposal in this repo, or `(adjacent)` if it comes from a separate EIP / PR that the proposals build on._
+_Single canonical definition per term used in this repo. Each entry tagged `(current EIP-8141)` if the concept comes from EIP-8141 itself, `(introduced here)` if it is added by a proposal in this repo, or `(adjacent)` if it comes from a separate EIP / PR that the proposals build on._
 
 ## Transaction model
 
-**Frame transaction** _(EIP-8141 base)_. The native account-abstraction transaction shape introduced by EIP-8141. A tx is a sequence of typed frames executed in order, each frame carrying a target, value, data, and a mode (VERIFY or SENDER).
+**Frame transaction** _(current EIP-8141)_. The native account-abstraction transaction shape introduced by EIP-8141. A tx is a sequence of typed frames executed in order, each frame carrying a target, value, data, and a mode (VERIFY or SENDER).
 
-**VERIFY frame** _(EIP-8141 base)_. A frame that runs an account's default code in a validation phase. Calls to `APPROVE` from a VERIFY frame set tx-scoped state (e.g., `payer_approved`, `guarantor`).
+**VERIFY frame** _(current EIP-8141)_. A frame that runs an account's default code in a validation phase. Calls to `APPROVE` from a VERIFY frame set tx-scoped state (e.g., `payer_approved`, `guarantor`).
 
-**SENDER frame** _(EIP-8141 base)_. A frame that executes user-intended action. `msg.sender` defaults to `tx.sender`.
+**SENDER frame** _(current EIP-8141)_. A frame that executes user-intended action. `msg.sender` defaults to `tx.sender`.
 
-**Default code** _(EIP-8141 base)_. The protocol-supplied bytecode that runs in a VERIFY frame for an EOA that has not delegated to custom code. Default code is where standard tx authentication lives.
+**Default code** _(current EIP-8141)_. The protocol-supplied bytecode that runs in a VERIFY frame for an EOA that has not delegated to custom code. Default code is where standard tx authentication lives.
 
-**APPROVE scope** _(EIP-8141 base; `guarantee` added by PR #11555)_. The opcode emitted by a VERIFY frame to set tx-scoped state. Scopes: `execution` (sender approved), `payment` (payer approved), `guarantee` (guarantor commitment).
+**APPROVE scope** _(current EIP-8141; guarantors proposed in PR #11555)_. The opcode emitted by a VERIFY frame to set tx-scoped state. Current scopes approve execution, payment, or both; guarantor encoding is still draft.
 
-**sighash** _(EIP-8141 base)_. The hash signed by the tx-level signature, computed by `compute_sig_hash`. VERIFY-frame `data` is elided; SENDER frames are not. See [`appendix/sighash-binding.md`](appendix/sighash-binding.md).
+**sighash** _(current EIP-8141)_. The hash signed by the tx-level signature, computed by `compute_sig_hash`. VERIFY-frame `data` is elided; SENDER frames are not. See [`appendix/sighash-binding.md`](appendix/sighash-binding.md).
 
 ## Primitives
 
@@ -32,15 +32,13 @@ _Single canonical definition per term used in this repo. Each entry tagged `(EIP
 
 **Signer binding** _(introduced here)_. Tx-scoped mechanism letting a PQ VERIFY frame bind `(digest, address)` claims that `ECRECOVER` resolves on subsequent calls within the same tx. Spec: [`proposals/signer-binding.md`](proposals/signer-binding.md).
 
-**Pubkey hydration** _(deprecated; renamed)_. Old name for **signer binding**. The rename happened during research; treat any external reference to "pubkey hydration" as referring to the spec in [`proposals/signer-binding.md`](proposals/signer-binding.md).
-
 **Verified-signers table** _(introduced here)_. The tx-scoped `set[(digest32, address)]` populated by binding VERIFY frames and queried by `ECRECOVER`. Spec: [`appendix/verified-signers.md`](appendix/verified-signers.md).
 
 **`PubkeyRegistry`** _(introduced here)_. Immutable system contract holding per-account `(scheme, pubkey)` for PQ accounts. Spec: [`appendix/system-contracts.md`](appendix/system-contracts.md).
 
-**Guarantor** _(adjacent, PR #11555)_. A tx-scoped role that commits to paying gas if sender VERIFY fails. Lets shared-state-read risk be priced as economic risk rather than mempool-policy risk. Spec: [`appendix/guarantors.md`](appendix/guarantors.md).
+**Guarantor** _(adjacent, [PR #11555](https://github.com/ethereum/EIPs/pull/11555))_. A tx-scoped role that commits to paying gas if sender VERIFY fails. Lets shared-state-read risk be priced as economic risk rather than mempool-policy risk. Spec: [`appendix/guarantors.md`](appendix/guarantors.md).
 
-## Mempool tiers _(EIP-8141 base; vocabulary refined here)_
+## Mempool tiers _(current EIP-8141; vocabulary refined here)_
 
 **Restrictive tier**. Public-mempool default. Deterministic checks; bounded reads against system contracts; no environmental opcodes during validation.
 

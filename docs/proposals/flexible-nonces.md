@@ -135,7 +135,7 @@ Wallet UX: key 0 shown as "Main sequence #n"; known lanes labeled by wallet conv
 
 | # | Question | Status |
 |---|---|---|
-| Q6 | VOPS state-growth budget for `NonceLaneRegistry` | Best-guess pending cross-client benchmarks. See [`docs/overview.md`](../overview.md) open uncertainties. |
+| Q6 | VOPS state-growth budget for `NonceLaneRegistry` | Best-guess pending cross-client benchmarks. Related upstream keyed-nonce tracks: [PR #11584](https://github.com/ethereum/EIPs/pull/11584) and draft EIP-8250 [PR #11598](https://github.com/ethereum/EIPs/pull/11598). |
 
 ## 11. Appendix references
 

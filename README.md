@@ -23,13 +23,13 @@ Terminology used across the docs is defined once in `docs/glossary.md`.
 
 Status legend:
 
-- **Base EIP-8141:** external upstream spec.
+- **Current EIP-8141:** external upstream spec. See [eip8141.io Current Spec](https://eip8141.io/current-spec), [Merged Changes](https://eip8141.io/merged-changes), and the [EIP text](https://eips.ethereum.org/EIPS/eip-8141).
 - **Guarantors:** pending companion feature, tracked separately and assumed to land in parallel.
 - **Flexible nonces, signer binding, validity windows:** expansion proposals from this repo.
 
 Guarantors are not part of the current published EIP-8141 spec. They are a pending companion feature, tracked separately, and this repo assumes they land in parallel with whichever expansion alternative is selected.
 
-The proposals expand the scope of the existing EIP-8141 upgrade. They ship in the same activation as EIP-8141, adding guarantors as baseline context plus a chosen subset of three independent expansion features:
+The proposals expand the scope of the existing EIP-8141 upgrade. They ship in the same activation as EIP-8141, adding guarantors as shared context plus a chosen subset of three independent expansion features:
 
 - **Flexible nonces**, protocol-native parallel nonce streams.
 - **Signer binding**, registry-backed PQ identity for `ECRECOVER` callers.
@@ -45,7 +45,7 @@ The proposals are presented as **five neutral alternatives**: three individual a
 | Key lanes | `docs/proposals/key-lanes.md` | Flexible nonces + signer binding |
 | Authorization scopes | `docs/proposals/authorization-scopes.md` | Flexible nonces + signer binding + validity windows |
 
-Every alternative ships guarantors (PR #11555) as the small mempool primitive that confirms the stream-advance invariant and unlocks public-mempool ERC-20 paymasters.
+Every alternative assumes [Guarantors](https://github.com/ethereum/EIPs/pull/11555) as the draft mempool primitive that confirms the stream-advance invariant and unlocks public-mempool ERC-20 paymasters.
 
 Flexible nonces, Key lanes, and Authorization scopes are complementary to Guarantors: they reduce contention, isolate sponsorship flows, and bound authorization risk, which makes Guarantors more viable in public mempools.
 
@@ -69,7 +69,7 @@ docs/
 │   └── authorization-scopes.md # Aggregated: Flexible nonces + signer binding + validity windows
 │
 └── appendix/               # Cross-cutting primitives, shared specs, and grounding analyses
-    ├── guarantors.md           # APPROVE(guarantee), in every alternative
+    ├── guarantors.md           # Draft guarantor payer primitive, in every alternative
     ├── sighash-binding.md      # Class A/B binding analysis
     ├── system-contracts.md     # NonceLaneRegistry + PubkeyRegistry: shared spec
     ├── verified-signers.md     # Verified-signers table + modified ECRECOVER: shared spec

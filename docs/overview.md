@@ -6,7 +6,7 @@ The proposals are presented as five neutral alternatives with no recommended pic
 
 Status legend:
 
-- **Base EIP-8141:** external upstream spec.
+- **Current EIP-8141:** external upstream spec. See [eip8141.io Current Spec](https://eip8141.io/current-spec), [Merged Changes](https://eip8141.io/merged-changes), and the [EIP text](https://eips.ethereum.org/EIPS/eip-8141).
 - **Guarantors:** pending companion feature, tracked separately and assumed to land in parallel.
 - **Flexible nonces, signer binding, validity windows:** expansion proposals from this repo.
 
@@ -18,10 +18,10 @@ Reader paths: core devs, overview + selected proposal + referenced appendices. W
 
 The proposals expand EIP-8141 rather than replace it. Every alternative includes:
 
-- Base EIP-8141 (frame transactions, default code, the existing `APPROVE` rule).
-- **Guarantors** (PR #11555): `APPROVE(guarantee)` scope, tx-scoped `guarantor`, mempool relaxation. Confirms the stream-advance invariant and unlocks public-mempool ERC-20 paymasters.
+- Current EIP-8141 (frame transactions, default code, five frame opcodes, restrictive mempool policy).
+- **Guarantors** ([PR #11555](https://github.com/ethereum/EIPs/pull/11555)): draft payer primitive for txs whose sender validation may fail. Confirms the stream-advance invariant and unlocks public-mempool ERC-20 paymasters.
 
-Guarantors are not part of the current published EIP-8141 spec. They are pending, tracked separately, and assumed to land in parallel. They are baseline context, not one of the three optional expansion features.
+Guarantors are not part of the current published EIP-8141 spec. They are pending, tracked separately, and assumed to land in parallel. They are shared context, not one of the three optional expansion features.
 
 Alternatives differ only in which combination of three independent features is added on top:
 
@@ -107,7 +107,7 @@ Alternatives differ only in which combination of three independent features is a
 
 ## What every alternative shares
 
-- **Guarantors** in every column: PR #11555 lands across the board.
+- **Guarantors** in every column: draft PR #11555 lands across the board.
 - **Zero opcodes, precompiles, account-encoding changes, core-invariant changes**: every alternative respects the design principles in `CLAUDE.md`.
 - **Resilience**: in any aggregated alternative, dropping one component does not invalidate the others; each feature stands on its own design.
 - **EIP-ready delta**: each proposal ends with a compact section intended to be portable into a formal EIP PR.

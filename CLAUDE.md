@@ -101,6 +101,7 @@ The `signer-binding.md` proposal (and any aggregated alternative including it) u
 
 - **No emojis.** Ever.
 - **Em dashes are restricted.** Allowed only in (a) titles with subtitles, (b) dates attached to a label, (c) list/table topic-description separators. Never as parenthetical brackets, colon substitutes, or inside prose sentences. Rewrite with commas, periods, semicolons, colons, or parentheses.
+- **Avoid `base` terminology.** Do not use "base EIP-8141", "EIP-8141 base", or "baseline" as status/scope labels. Use "current EIP-8141", "current spec", "published spec", "upstream spec", "existing rule", or "shared context" instead.
 - **Direct and terse.** No filler, no trailing summaries.
 - **No individual author attribution on scratch docs.**
 - **Feature proposals follow**: Priorities → Single-line spec delta → Envelope/state changes → Consensus rules → Mempool rules → RPC → Wallet UX → Interactions with other primitives → Comparison → Non-goals → Spec delta summary.
@@ -129,8 +130,9 @@ Every doc opens with `# <Title>`, optionally followed by a single italicised con
 
 1. Read `docs/overview.md` first; it covers the per-alternative analysis and open uncertainties.
 2. Read `docs/priorities.md` for the opinionated framing: which bundles are viable in one upgrade, what is load-bearing, what folds in, what falls out.
-3. If working on a specific proposal, read it directly; feedback pressure is already baked in.
-4. Shared specs live in `docs/appendix/`: registry contracts (`system-contracts.md`), verified-signers table + modified ECRECOVER (`verified-signers.md`), mempool tiers (`mempool-tiers.md`), curve data (`pq-analysis.md`). Proposals reference these; don't duplicate them.
+3. Check [eip8141.io Current Spec](https://eip8141.io/current-spec), [Merged Changes](https://eip8141.io/merged-changes), and active related PRs before changing status-sensitive text.
+4. If working on a specific proposal, read it directly; feedback pressure is already baked in.
+5. Shared specs live in `docs/appendix/`: registry contracts (`system-contracts.md`), verified-signers table + modified ECRECOVER (`verified-signers.md`), mempool tiers (`mempool-tiers.md`), curve data (`pq-analysis.md`). Proposals reference these; don't duplicate them.
 
 ---
 

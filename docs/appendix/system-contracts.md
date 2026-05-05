@@ -5,7 +5,7 @@ Canonical for:  NonceLaneRegistry, PubkeyRegistry
 Referenced by:  Flexible nonces, Signer binding, Key lanes, Authorization scopes
 ```
 
-_Canonical specs for the two system contracts introduced by the alternatives. Single source of truth referenced by [`proposals/flexible-nonces.md`](../proposals/flexible-nonces.md), [`proposals/signer-binding.md`](../proposals/signer-binding.md), [`proposals/key-lanes.md`](../proposals/key-lanes.md), and [`proposals/authorization-scopes.md`](../proposals/authorization-scopes.md)._
+_Canonical specs for the two system contracts introduced by the alternatives. Single source of truth referenced by [`proposals/flexible-nonces.md`](../proposals/flexible-nonces.md), [`proposals/signer-binding.md`](../proposals/signer-binding.md), [`proposals/key-lanes.md`](../proposals/key-lanes.md), and [`proposals/authorization-scopes.md`](../proposals/authorization-scopes.md). Related upstream keyed-nonce work lives in [PR #11584](https://github.com/ethereum/EIPs/pull/11584) and draft EIP-8250 [PR #11598](https://github.com/ethereum/EIPs/pull/11598)._
 
 Both contracts follow the EIP-4788 / EIP-2935 system-contract pattern: deployed at upgrade-coordinated reserved addresses, immutable, address + expected code-hash pinned by consensus.
 
@@ -74,7 +74,7 @@ Both contracts share:
 
 ## 4. Why system contracts and not account-encoding fields
 
-An earlier Flexible-nonces draft proposed adding a `lanesRoot` field to the account RLP encoding (the account 4-tuple: `nonce, balance, storageRoot, codeHash`). Rejected: changing account encoding ripples through every RLP parser, every state-root computation, EIP-161, archive-node decoding, and witness format. The system-contract pattern keeps the change at the storage layer where existing machinery already covers it: snap sync, witnesses, state-tree transitions, archive decoding all work without bespoke code paths.
+An earlier Flexible-nonces draft proposed adding nonce-stream state to the account RLP encoding (the account 4-tuple: `nonce, balance, storageRoot, codeHash`). Rejected: changing account encoding ripples through every RLP parser, every state-root computation, EIP-161, archive-node decoding, and witness format. The system-contract pattern keeps the change at the storage layer where existing machinery already covers it: snap sync, witnesses, state-tree transitions, archive decoding all work without bespoke code paths.
 
 By extension, PubkeyRegistry uses the same pattern. Storing a per-account PQ pubkey on the account record itself was never seriously considered for the same reasons, with the additional size problem for lattice and multivariate schemes (kilobyte-scale pubkeys would balloon the account RLP).
 

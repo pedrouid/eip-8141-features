@@ -1,27 +1,27 @@
 # EIP-8141 Primitive: Guarantors
 
 ```
-Canonical for:  APPROVE(guarantee), tx-scoped guarantor field, mempool relaxation
+Canonical for:  guarantor payer semantics, draft PR #11555, mempool relaxation
 Referenced by:  every alternative
 ```
 
-_Assumes PR #11555 (derekchiang, Apr 22) lands in roughly its proposed shape; the design is still iterating and the exact flags/scopes may change. Bundled with every alternative; the proposals all ship "EIP-8141 + guarantors + the proposal's features."_
+_Assumes [PR #11555](https://github.com/ethereum/EIPs/pull/11555) (derekchiang, Apr 22) lands in roughly its proposed shape; the design is still iterating and exact encoding may change. Bundled with every alternative; the proposals all ship "EIP-8141 + guarantors + the proposal's features."_
 
 ## What guarantors are
 
-PR #11555 introduces a **guarantor payer**: a party that commits to paying gas even if sender validation fails. When a tx carries a guarantor, mempool nodes may skip sender-VERIFY simulation entirely and propagate on the strength of the guarantor's signature alone. If on-chain execution reveals that sender VERIFY would have failed, the guarantor absorbs the gas.
+[PR #11555](https://github.com/ethereum/EIPs/pull/11555) introduces a **guarantor payer**: a party that commits to paying gas even if sender validation fails. When a tx carries a guarantor, mempool nodes may skip sender-VERIFY simulation entirely and propagate on the strength of the guarantor's signature alone. If on-chain execution reveals that sender VERIFY would have failed, the guarantor absorbs the gas.
 
 Two mechanical effects:
 
-1. A new payer role and an APPROVE scope for guarantee.
+1. A new payer role, with final encoding still draft.
 2. A two-branch gas-payment model: sender pays on VERIFY success, guarantor pays otherwise.
 
 Key property: guarantors route shared-state reads from a mempool-policy problem into an economic-risk problem. A VERIFY frame reading an ERC-20 balance becomes mempool-admissible when a guarantor backs the tx.
 
 ## Protocol surface added
 
-- **`APPROVE(guarantee)`** scope, called by a VERIFY frame targeting the guarantor.
-- **`guarantor: Optional[address]`** tx-scoped state, set on `APPROVE(guarantee)`. Distinct from `payer_approved`.
+- **Guarantor commitment**, currently draft in PR #11555 and encoded separately from ordinary payer approval.
+- **`guarantor: Optional[address]`** tx-scoped state, set by the guarantor commitment. Distinct from `payer_approved`.
 - **Gas-payment resolution** at inclusion time: sender VERIFY success → payer pays; sender VERIFY failure → guarantor pays.
 - **Mempool relaxation** conditional on a valid guarantor commitment: sender-VERIFY simulation skippable. The guarantor's own VERIFY still fits restrictive tier.
 
@@ -58,7 +58,7 @@ The dependence runs both ways. A guarantor sponsoring many txs in parallel must 
 
 ## Spec delta
 
-1. Add `APPROVE(guarantee)` scope.
+1. Add a guarantor commitment path.
 2. Add tx-scoped state `guarantor: Optional[address]`.
 3. Gas-payment rule: sender VERIFY success → payer pays; failure → guarantor pays.
 4. Mempool rule: if a valid guarantor commitment is present and guarantor VERIFY fits restrictive tier, sender-VERIFY simulation skippable; shared-state reads in sender VERIFY become mempool-admissible.
@@ -66,4 +66,4 @@ The dependence runs both ways. A guarantor sponsoring many txs in parallel must 
 
 ## Summary
 
-Small surface (one APPROVE scope, one tx-scoped field, one mempool relaxation); substantial downstream effect. Enables public-mempool ERC-20 paymasters and confirms the stream-advance invariant relied on by Flexible nonces. Bundled into every alternative; independently valuable even if every other feature is dropped.
+Small surface (one commitment path, one tx-scoped field, one mempool relaxation); substantial downstream effect. Enables public-mempool ERC-20 paymasters and confirms the stream-advance invariant relied on by Flexible nonces. Bundled into every alternative; independently valuable even if every other feature is dropped.

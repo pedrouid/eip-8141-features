@@ -5,9 +5,9 @@ Canonical for:  restrictive / expansive / private tier vocabulary as used in thi
 Referenced by:  every alternative
 ```
 
-_Reference for the mempool-admission tiers EIP-8141 transactions land in. Cited by every alternative. EIP-8141 is the normative source; this doc collects the parts proposals depend on._
+_Reference for mempool-admission paths EIP-8141 transactions land in. Cited by every alternative. The [current spec](https://eip8141.io/current-spec#mempool-policy) is normative for the restrictive tier; [Mempool Strategy](https://eip8141.io/mempool-strategy) tracks the broader two-tier design._
 
-EIP-8141 defines three admission tiers for tx propagation. They differ in what a mempool node is allowed to evaluate during validation, which determines what kinds of frames a tx can carry and still be gossiped publicly.
+EIP-8141 specifies the restrictive public-mempool tier. The website also tracks an expansive opt-in tier and private/direct-to-builder delivery for txs that remain consensus-valid but are not publicly gossipable.
 
 | Tier | What it admits | Validation budget | What it forbids |
 |---|---|---|---|
