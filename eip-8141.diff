@@ -5,14 +5,14 @@
  title: Frame Transaction
  description: Add frame abstraction for transaction validation, execution, and gas payment
 -author: Vitalik Buterin (@vbuterin), lightclient (@lightclient), Felix Lange (@fjl), Yoav Weiss (@yoavw), Alex Forshtat (@forshtat), Dror Tirosh (@drortirosh), Shahaf Nacson (@shahafn), Derek Chiang (@derekchiang)
-+author: Vitalik Buterin (@vbuterin), lightclient (@lightclient), Felix Lange (@fjl), Yoav Weiss (@yoavw), Alex Forshtat (@forshtat), Dror Tirosh (@drortirosh), Shahaf Nacson (@shahafn), Derek Chiang (@derekchiang), Pedro Gomes (@pedrouid)
++author: Vitalik Buterin (@vbuterin), lightclient (@lightclient), Felix Lange (@fjl), Yoav Weiss (@yoavw), Alex Forshtat (@forshtat), Dror Tirosh (@drortirosh), Shahaf Nacson (@shahafn), Derek Chiang (@derekchiang), Thomas Thiery (@soispoke), Toni Wahrstätter (@nerolation), Gregory Markou (@GregTheGreek), James Prestwich (@prestwich) <james@prestwi.ch>, Pedro Gomes (@pedrouid)
  discussions-to: https://ethereum-magicians.org/t/frame-transaction/27617
  status: Draft
  type: Standards Track
  category: Core
  created: 2026-01-29
--requires: 1559, 2718, 4844
-+requires: 1559, 2718, 2935, 4788, 4844
+-requires: 1559, 2718, 3607, 4844
++requires: 1559, 2718, 2935, 3607, 4788, 4844
  ---
  
  ## Abstract
@@ -769,9 +769,9 @@
 -When a new canonical block is accepted, the node removes any included frame transactions from the public mempool, updates paymaster reservations accordingly, and identifies the remaining pending transactions whose tracked dependencies were touched by the block. This includes at least transactions for the same sender, transactions whose recorded sender storage slots changed, and transactions that reference a canonical paymaster instance whose balance, code, or delayed-withdrawal state changed. The node then re-simulates the validation prefix of only those affected transactions against the new head and evicts any transaction that no longer satisfies the public mempool rules.
 +When a new canonical block is accepted, the node removes any included frame transactions from the public mempool, updates paymaster reservations accordingly, and identifies the remaining pending transactions whose tracked dependencies were touched by the block. This includes at least transactions for the same sender, transactions whose recorded sender storage slots changed, transactions whose `(sender, signer)` `AUTH_MANAGER` slot changed, transactions that reference a canonical paymaster (or guarantor) instance whose balance, code, or delayed-withdrawal state changed, and transactions whose validity window has just become future-valid or expired. The node then re-simulates the validation prefix of only those affected transactions against the new head and evicts any transaction that no longer satisfies the public mempool rules.
  
- ## Rationale
+ #### Transaction origination
  
-@@ -761,12 +1016,38 @@
+@@ -767,12 +1022,38 @@
  
  Verification logic MUST NOT assign policy meaning to signature encodings or adjacent `VERIFY` frame data unless that meaning is independently authenticated.
  
@@ -811,7 +811,7 @@
  ### Payer in receipt
  
  The payer cannot be determined statically from a frame transaction and is relevant to users. The only way to provide this information safely and efficiently over the JSON-RPC is to record this data in the receipt object.
-@@ -785,7 +1066,7 @@
+@@ -791,7 +1072,7 @@
  
  Atomic batching allows multiple `SENDER` frames to be grouped into a single all-or-nothing unit. This is useful when a sequence of calls is only meaningful if all succeed together, such as an approval followed by a swap, or a series of interdependent state changes. Without this feature, a revert in one frame would leave the preceding frames' state changes applied, potentially leaving the account in an undesirable intermediate state.
  
@@ -820,7 +820,7 @@
  
  ### Per-frame cost
  
-@@ -886,6 +1167,38 @@
+@@ -892,6 +1173,38 @@
  - Frame 2: Sends tokens to sponsor.
  - Frame 3: User's intended call.
  
@@ -859,7 +859,7 @@
  ### Data Efficiency
  
  **Basic transaction sending ETH from a smart account:**
-@@ -894,12 +1207,15 @@
+@@ -900,12 +1213,15 @@
  | --------------------------------- | ----- |
  | Tx wrapper                        | 1     |
  | Chain ID                          | 1     |
@@ -875,7 +875,7 @@
  | Frames wrapper                    | 1     |
  | Sender validation frame: mode     | 1     |
  | Sender validation frame: flags    | 1     |
-@@ -913,12 +1229,10 @@
+@@ -919,12 +1235,10 @@
  | Execution frame: gas              | 1     |
  | Execution frame: value            | 5     |
  | Execution frame: data             | 0     |
@@ -890,7 +890,7 @@
  **First transaction from an account (add deployment frame):**
  
  | Field                      | Bytes |
-@@ -966,6 +1280,12 @@
+@@ -972,6 +1286,12 @@
  
  The `ORIGIN` opcode behavior changes for frame transactions, returning the frame's caller rather than the traditional transaction origin. This is consistent with the precedent set by EIP-7702, which already modified `ORIGIN` semantics. Contracts that rely on `ORIGIN = CALLER` for security checks (a discouraged pattern) may behave differently under frame transactions.
  
@@ -903,7 +903,7 @@
  ## Security Considerations
  
  ### Transaction Propagation
-@@ -984,7 +1304,7 @@
+@@ -990,7 +1310,7 @@
  }
  ```
  
@@ -912,7 +912,7 @@
  
  #### Deploy Frame Front-Running
  
-@@ -1002,12 +1322,32 @@
+@@ -1008,12 +1328,32 @@
  
  Node implementations should consider restricting which opcodes and storage slots validation frames can access, similar to ERC-7562. This isolates transactions from each other and limits mass invalidation vectors.
  
