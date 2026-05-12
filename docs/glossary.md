@@ -28,9 +28,9 @@ _Single canonical definition per term used in this repo. Each entry tagged `(cur
 
 **`NonceManager`** _(introduced here)_. Immutable system contract holding per-account per-key 64-bit sequence numbers. Used by the standalone Flexible-nonces alternative. Spec: [`appendix/system-contracts.md`](appendix/system-contracts.md).
 
-**Validity windows** _(introduced here)_. Envelope-level time bounds via `valid_after` / `valid_before`. Spec: [`proposals/validity-windows.md`](proposals/validity-windows.md).
+**Expiry** _(introduced here)_. Envelope-level transaction deadline via `expiry`. Spec: [`proposals/validity-windows.md`](proposals/validity-windows.md).
 
-**`valid_after` / `valid_before`** _(introduced here)_. Envelope fields, `uint64`, unix seconds; 0 = no bound. A tx is consensus-invalid if its inclusion timestamp falls outside the window.
+**`expiry`** _(introduced here)_. Envelope field, `uint64`, unix seconds; 0 = no bound. A tx is consensus-invalid if `block.timestamp >= expiry`. There is no lower bound; scheduled activation is handled offchain by deferring submission.
 
 **Signer binding** _(introduced here)_. Tx-scoped mechanism letting a PQ VERIFY frame bind `(digest, address)` claims that `ECRECOVER` resolves on subsequent calls within the same tx. Spec: [`proposals/signer-binding.md`](proposals/signer-binding.md).
 
@@ -54,7 +54,7 @@ Reference: [`appendix/mempool-tiers.md`](appendix/mempool-tiers.md).
 
 ## Sighash binding analysis _(introduced here)_
 
-**Class A binding**. Protocol-visible data whose validity depends only on the tx (e.g., `nonce_key` / `signer`, `valid_after`). MUST be covered by the tx sighash; lives in the envelope.
+**Class A binding**. Protocol-visible data whose validity depends only on the tx (e.g., `nonce_key` / `signer`, `expiry`). MUST be covered by the tx sighash; lives in the envelope.
 
 **Class B binding**. Protocol-visible data whose validity depends on an independent signature chain (e.g., signer-binding claims verified under a registered PQ pubkey). Does not require tx-sighash coverage.
 

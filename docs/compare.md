@@ -4,7 +4,7 @@ _Delta map for the root `eip-8141.md` draft in this repo._
 
 ## Scope
 
-This proposal is a consolidated expansion of the current EIP-8141 spec. It folds together Guarantors, keyed nonce streams, signer binding, and validity windows into one PR-shaped document, with supporting assets under `assets/eip-8141/`.
+This proposal is a consolidated expansion of the current EIP-8141 spec. It folds together Guarantors, keyed nonce streams, signer binding, and a one-sided `expiry` envelope field into one PR-shaped document, with supporting assets under `assets/eip-8141/`.
 
 Primary comparison points:
 
@@ -18,12 +18,12 @@ The current spec defines frame transactions, `APPROVE`, default EOA verification
 
 Changed from current EIP-8141:
 
-- Transaction payload gains `signer` (uint64), `valid_after`, and `valid_before`.
+- Transaction payload gains `signer` (uint64) and `expiry` (uint64).
 - `tx.nonce` keeps its name, type (`uint64`), and position. Its meaning is `signer`-conditional: legacy account nonce when `signer == 0`, per-signer stream sequence when `signer != 0`. No envelope rename of `nonce`.
 - `APPROVE` gains `APPROVE_GUARANTEE`, expanding approval flags from two scope bits to three.
 - Atomic-batch flag moves from bit `2` to bit `3`.
 - A frame signature hash is added at `TXPARAM(0x0B)` for guarantor signatures that must bind other VERIFY frame data. (Upstream's `0x09 = len(frames)` and `0x0A = currently executing frame index` are preserved; the new entry sits at `0x0B`.)
-- `TXPARAM` gains entries for `signer`, pre-state legacy nonce, and validity-window bounds.
+- `TXPARAM` gains entries for `signer`, pre-state legacy nonce, and `expiry`.
 - Restrictive mempool replacement changes from `(sender, nonce)` to `(sender, signer, nonce)`.
 - `AUTH_MANAGER` is introduced as a single system contract for authentication state.
 - `ECRECOVER` gains a hit-path-first signer-binding lookup while preserving the secp256k1 miss path.
@@ -54,9 +54,9 @@ Changed from PR #11555:
 - Sender nonce handling is replaced by per-signer nonce streams, so inclusion consumes `(sender, signer, nonce)` through `AUTH_MANAGER`.
 - Guarantor replay discussion is integrated with keyed nonce semantics rather than relying only on the canonical paymaster's per-sender guarantor nonce.
 - The canonical paymaster remains a guarantor asset, but global replay protection for the sender transaction is handled by the frame transaction's keyed nonce domain.
-- The proposal adds signer binding and validity windows after guarantor semantics, so the final `TXPARAM` table has more entries than PR #11555.
+- The proposal adds signer binding and `expiry` after guarantor semantics, so the final `TXPARAM` table has more entries than PR #11555.
 
-Main integration rule: Guarantors must stay the mempool-admission primitive. Flexible nonces, signer binding, and validity windows must not require public mempool nodes to simulate sender validation when a valid canonical guarantor prefix is present.
+Main integration rule: Guarantors must stay the mempool-admission primitive. Flexible nonces, signer binding, and `expiry` must not require public mempool nodes to simulate sender validation when a valid canonical guarantor prefix is present.
 
 ## Compared To Keyed Nonces PR
 
@@ -77,7 +77,7 @@ Changed from PR #11598:
 - The system contract is named `AUTH_MANAGER`, not `NONCE_MANAGER`. The rename is load-bearing: a `NONCE_MANAGER` is a one-purpose registry, but `AUTH_MANAGER` is the canonical authentication-state contract for the account model. Keyed nonce streams and PQ signer registrations are both authentication state, and EIP-8141 needs the latter so accounts can use non-recoverable signature schemes (lattice, multivariate, hash-based) recognized by immutable `ECRECOVER` callers. Putting both behind one address means a single canonical contract carries the full identity surface for any signature scheme the protocol supports, present or future, instead of forking the upgrade into two parallel registries with two pubkey-resolution paths.
 - `AUTH_MANAGER` stores both keyed nonce streams and signer registrations under one storage layout.
 - `AUTH_MANAGER` has actual contract semantics in [`assets/eip-8141/AuthManager.sol`](../assets/eip-8141/AuthManager.sol), including `registerSigner` (account picks the `signer` id, must be non-zero), `clearSigner`, `getSigner`, `getNonce`, `checkNonce`, and `advanceNonce`.
-- Keyed nonces are part of the same PR as Guarantors, signer binding, and validity windows rather than a separate EIP.
+- Keyed nonces are part of the same PR as Guarantors, signer binding, and `expiry` rather than a separate EIP.
 - The nonce-consumption rule is stated as successful inclusion regardless of sender VERIFY outcome, to compose with guarantor-backed txs.
 
 Main integration rule: nonce streams and signer registrations are both authentication state. Pubkeys remain variables and calldata inputs, but account-facing terminology is signer-centric.
@@ -92,12 +92,15 @@ Signer binding is new relative to current EIP-8141, PR #11555, and PR #11598. It
 - Modified `ECRECOVER`: table hit returns the bound address; miss follows existing secp256k1 behavior.
 - `MAX_BOUND_SIGNERS = 8`.
 
-Validity windows are also new relative to those specs. They add:
+Transaction expiry is also new relative to those specs. The motivating use-case is intent-style flows (signed-order DEXes, cross-chain bridges, RFQ aggregators, gasless swaps): consensus-enforced deadlines on the settlement tx itself, so filler timing stops being a trust assumption. It adds:
 
-- `valid_after` and `valid_before` envelope fields.
-- Pre-frame timestamp checks with exclusive bounds.
-- Deterministic mempool states: future-valid, ready, expired.
-- Replacement compatibility with `(sender, signer, nonce)`.
+- `expiry` envelope field (uint64, unix seconds; 0 = no bound).
+- Pre-frame timestamp check with an exclusive upper bound: `block.timestamp >= expiry` invalidates the tx.
+- Deterministic mempool states: ready, expired. No future-valid state.
+- Replacement compatibility with `(sender, signer, nonce)`; replacements must satisfy their own `expiry`.
+- Two JSON-RPC error codes (`expiry_already_passed`, `expiry_too_far_future`).
+
+The earlier draft carried both `valid_after` and `valid_before`. The lower bound was dropped on cost-per-envelope-byte grounds; rationale in [`proposals/validity-windows.md`](proposals/validity-windows.md) §3.
 
 ## Assets
 

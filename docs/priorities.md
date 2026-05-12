@@ -21,7 +21,7 @@ Everything else is incremental once that holds.
 
 Native AA changes the consensus surface. It ships through the all-cores upgrade pipeline, with cross-client review, audit, and activation cycles measured in years. EIP-8141 is the upgrade that lifts AA into the protocol. The expansion this repo proposes lands inside that upgrade or not at all.
 
-There is no realistic second opportunity to add a `NonceManager` later, no follow-on to slot validity windows into a tx envelope that already shipped, no third pass to retrofit the recovery path. Whatever bundles into this upgrade is what the protocol carries forward.
+There is no realistic second opportunity to add a `NonceManager` later, no follow-on to slot an `expiry` field into a tx envelope that already shipped, no third pass to retrofit the recovery path. Whatever bundles into this upgrade is what the protocol carries forward.
 
 The decision is therefore not which alternative is best in isolation. It is: how many features can be defended in one cross-client review cycle, knowing the upgrade is one-shot.
 
@@ -76,20 +76,22 @@ The pre-tx rule is a single registry consult: check the per-signer sequence, adv
 
 If the upgrade ships signer binding with the nonce side on day one, Flexible nonces are deliverable. Otherwise they are not deliverable in this upgrade and not deliverable after it.
 
-## Folding in validity windows
+## Folding in expiry
 
-Validity windows ([`proposals/validity-windows.md`](proposals/validity-windows.md)) close the stale-signature gap. They are useful, FOCIL-friendly, and the smallest possible envelope change in isolation. They are not load-bearing for the central claim, but the same one-upgrade constraint applies: two envelope fields and a pre-tx time check land in this upgrade or not at all.
+Expiry ([`proposals/validity-windows.md`](proposals/validity-windows.md)) closes the stale-signature gap. FOCIL-friendly, smallest envelope change: one `uint64` field, one pre-tx time check, no contract, no future-valid state. Not load-bearing for the central claim, but the one-upgrade constraint applies: it lands here or not at all.
 
-Wallet-side mitigations (short-lived intents, refresh on demand) cover most of the user-visible gap if windows are dropped. The decision is therefore whether the upgrade can absorb the additional envelope surface and pre-tx check in the same review cycle as signer binding and Flexible nonces, not whether they can be added later.
+One-sided by design. The earlier `valid_after` + `valid_before` pair was cut to a single `expiry`: a second field has to earn its keep against every tx that does not use it. Dominant use-cases (intents, swaps, trading, async actions) all use a deadline; scheduled activation is solvable offchain by deferring submission. See [`proposals/validity-windows.md`](proposals/validity-windows.md) §3.
+
+If expiry drops, wallet-side mitigations cover most of the gap. The decision is whether the upgrade can absorb the field alongside signer binding and Flexible nonces, not whether to add it later.
 
 ## Three viable bundles
 
 Under the one-upgrade constraint, the five alternatives in [`overview.md`](overview.md) collapse to three viable bundles:
 
-- **Signer binding**, the minimum requirement. `PubkeyRegistry`, verified-signers table, `ECRECOVER` hit-path-first lookup. No Flexible nonces, no validity windows.
+- **Signer binding**, the minimum requirement. `PubkeyRegistry`, verified-signers table, `ECRECOVER` hit-path-first lookup. No Flexible nonces, no expiry.
 - **Key streams**, the middle ground. Signer binding with a per-signer nonce stream, plus the `signer` envelope field (uint64) and per-signer mempool rules. One registry, two features.
-- **Auth scopes**, the maximum. Key streams plus validity windows. The most user-visible bundle achievable in one upgrade.
+- **Auth scopes**, the maximum. Key streams plus expiry. The most user-visible bundle achievable in one upgrade.
 
-Standalone **Flexible nonces** and **validity windows** are not viable under this constraint. They ship a tx model that cannot accommodate PQ accounts on day one, and there is no second upgrade in which to add signer binding afterwards. They appear in `overview.md` for completeness; this doc rules them out.
+Standalone **Flexible nonces** and **Expiry** are not viable under this constraint. They ship a tx model that cannot accommodate PQ accounts on day one, and there is no second upgrade in which to add signer binding afterwards. They appear in `overview.md` for completeness; this doc rules them out.
 
 The hierarchy: **Auth scopes is best, Key streams is the middle ground, Signer binding is the minimum.** The decision between them is review burden in one cycle, not feature pickability across cycles. Signer binding answers "what must be in this upgrade for EIP-8141 to deliver on its own premise"; Key streams and Auth scopes answer "how much more can the same upgrade carry without losing review."

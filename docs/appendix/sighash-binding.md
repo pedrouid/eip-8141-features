@@ -2,7 +2,7 @@
 
 ```
 Canonical for:  Class A vs Class B binding analysis
-Referenced by:  Flexible nonces, Validity windows, Key streams, Auth scopes
+Referenced by:  Flexible nonces, Expiry, Key streams, Auth scopes
 ```
 
 _Cross-cutting binding analysis; relevant to any alternative that adds protocol-visible data._
@@ -19,7 +19,7 @@ This doc resolves the binding for protocol-visible data added by the proposals.
 
 ### Class A: validity depends only on the transaction
 
-Stream key and sequence for Flexible nonces; validity window bounds. No account-side signature covers them; the consensus check happens before any account code runs. If the tx signature doesn't cover the field, nothing does. **Class A must be bound by the tx sighash.**
+Stream key and sequence for Flexible nonces; `expiry`. No account-side signature covers them; the consensus check happens before any account code runs. If the tx signature doesn't cover the field, nothing does. **Class A must be bound by the tx sighash.**
 
 ### Class B: validity depends on an independent signature chain
 
@@ -27,7 +27,7 @@ Signer-binding claims fall here. The integrity of a `(digest, address)` claim co
 
 Conflating the classes is what led earlier drafts to put everything in VERIFY calldata and claim no sighash changes were needed.
 
-## Class A binding: Flexible nonces and validity windows
+## Class A binding: Flexible nonces and expiry
 
 Two viable designs were considered for Flexible nonces:
 
@@ -41,7 +41,7 @@ Two viable designs were considered for Flexible nonces:
 
 **Pick: A2.** One envelope field is cheaper than a VERIFY-layout restructure plus a sighash rule change.
 
-Validity-window bounds (`valid_after`, `valid_before`) are envelope fields by the same reasoning: the tx-sighash covers them automatically; consensus checks them pre-frame.
+`expiry` is an envelope field by the same reasoning: the tx-sighash covers it automatically; consensus checks it pre-frame.
 
 **Implication for the alternatives:** all stream-key, sequence, and time-bound data lives in envelope fields. No VERIFY-layout restructure. No sighash rule change.
 
@@ -51,8 +51,8 @@ Signer binding claims `(digest, address)` ahead of `ECRECOVER` execution. The cl
 
 ## Protocol affordances required
 
-For Class A (Flexible nonces, validity windows):
-- Envelope fields: `nonce_key` (standalone) or `signer` (aggregated); `valid_after`; `valid_before`.
+For Class A (Flexible nonces, expiry):
+- Envelope fields: `nonce_key` (standalone) or `signer` (aggregated); `expiry`.
 - Protocol pre-tx checks updated.
 - No sighash rule change. No VERIFY-layout change.
 
@@ -65,7 +65,7 @@ For Class B (signer binding):
 | Data | Class | Binding | Sighash change? | Envelope change? |
 |---|---|---|---|---|
 | Flexible-nonce stream selector | A | Envelope `nonce_key` (standalone) / `signer` (aggregated), covered by existing sighash | No | Yes, one field |
-| Validity bounds | A | Envelope `valid_after` / `valid_before`, covered by existing sighash | No | Yes, two fields |
+| Expiry | A | Envelope `expiry`, covered by existing sighash | No | Yes, one field |
 | Signer binding `(digest, address)` claim | B | PQ signature over pubkey at VERIFY time | No | No |
 
 The earlier "no envelope changes anywhere" stance was wrong. Stream keys and time bounds warrant envelope fields because no account-side signature can bind them. Signer-binding claims do not, because they have their own independent signature chain.
