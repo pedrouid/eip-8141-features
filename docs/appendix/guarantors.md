@@ -54,7 +54,7 @@ The dependence runs both ways. A guarantor sponsoring many txs in parallel must 
 ## Interactions with other primitives
 
 - **Flexible nonces**: confirms stream-advance invariant.
-- **Validity windows**: orthogonal. If a tx expires between admission and inclusion, mempool drops it; guarantor doesn't pay for non-includable txs.
+- **Envelope expiry / Validity windows**: orthogonal. If a tx expires between admission and inclusion, mempool drops it; guarantor doesn't pay for non-includable txs.
 - **Signer binding**: orthogonal. A guarantor-backed tx may include binding PQ VERIFY frames; the guarantor's commitment is independent.
 - **Sighash binding**: unaffected.
 

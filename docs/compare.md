@@ -4,7 +4,7 @@ _Delta map for the root `eip-8141.md` draft in this repo._
 
 ## Scope
 
-This proposal is a consolidated expansion of the current EIP-8141 spec. It folds together Guarantors, keyed nonce streams, signer binding, and a one-sided `expiry` envelope field into one PR-shaped document, with supporting assets under `assets/eip-8141/`.
+This proposal is a consolidated expansion of the current EIP-8141 spec. It folds together Guarantors, keyed nonce streams, signer binding, and an envelope `expiry` field into one PR-shaped document, with supporting assets under `assets/eip-8141/`.
 
 Primary comparison points:
 
@@ -92,7 +92,7 @@ Signer binding is new relative to current EIP-8141, PR #11555, and PR #11598. It
 - Modified `ECRECOVER`: table hit returns the bound address; miss follows existing secp256k1 behavior.
 - `MAX_BOUND_SIGNERS = 8`.
 
-Transaction expiry is also new relative to those specs. The motivating use-case is intent-style flows (signed-order DEXes, cross-chain bridges, RFQ aggregators, gasless swaps): consensus-enforced deadlines on the settlement tx itself, so filler timing stops being a trust assumption. It adds:
+Envelope expiry is also new relative to those specs. The motivating use-case is intent-style flows (signed-order DEXes, cross-chain bridges, RFQ aggregators, gasless swaps): consensus-enforced deadlines on the settlement tx itself, so filler timing stops being a trust assumption. It adds:
 
 - `expiry` envelope field (uint64, unix seconds; 0 = no bound).
 - Pre-frame timestamp check with an exclusive upper bound: `block.timestamp >= expiry` invalidates the tx.
@@ -100,7 +100,7 @@ Transaction expiry is also new relative to those specs. The motivating use-case 
 - Replacement compatibility with `(sender, signer, nonce)`; replacements must satisfy their own `expiry`.
 - Two JSON-RPC error codes (`expiry_already_passed`, `expiry_too_far_future`).
 
-The earlier draft carried both `valid_after` and `valid_before`. The lower bound was dropped on cost-per-envelope-byte grounds; rationale in [`proposals/validity-windows.md`](proposals/validity-windows.md) §3.
+The two-sided sibling alternative is [`proposals/validity-windows.md`](proposals/validity-windows.md), which ships both `valid_after` and `valid_before`. The lower bound is dropped on cost-per-envelope-byte grounds; head-to-head rationale in [`proposals/envelope-expiry.md`](proposals/envelope-expiry.md) §3.
 
 ## Assets
 

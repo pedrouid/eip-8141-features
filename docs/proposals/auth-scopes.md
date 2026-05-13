@@ -12,7 +12,7 @@ Shared appendices:  system-contracts, verified-signers, mempool-tiers,
 
 ## 1. Status and scope
 
-Aggregated alternative. All three features in one upgrade: Flexible nonces + signer binding + expiry. This doc is the merged spec; sections labelled **Inherited from §X** restate component content, sections labelled **New** cover the cross-feature analysis. Constraints respected (no new opcodes, precompiles, frame modes, account-encoding changes, sighash changes) are listed in [`docs/overview.md`](../overview.md). Identified as the maximum viable bundle in [`docs/priorities.md`](../priorities.md). The consolidated EIP draft [`/eip-8141.md`](../../eip-8141.md) is the PR-shaped execution of this proposal; [`docs/compare.md`](../compare.md) is the delta map against upstream.
+Aggregated alternative. All three features in one upgrade: Flexible nonces + signer binding + envelope expiry. This doc is the merged spec; sections labelled **Inherited from §X** restate component content, sections labelled **New** cover the cross-feature analysis. Constraints respected (no new opcodes, precompiles, frame modes, account-encoding changes, sighash changes) are listed in [`docs/overview.md`](../overview.md). Identified as the maximum viable bundle in [`docs/priorities.md`](../priorities.md). The consolidated EIP draft [`/eip-8141.md`](../../eip-8141.md) is the PR-shaped execution of this proposal; [`docs/compare.md`](../compare.md) is the delta map against upstream.
 
 ## 2. Motivation
 
@@ -22,7 +22,7 @@ Together, the three features give every EIP-8141 account a protocol-level vocabu
 
 Priorities:
 
-1. Two envelope fields: `signer`, `expiry`. No envelope field for signer binding. No future-valid / `valid_after` field; see [`validity-windows.md`](validity-windows.md) §3.
+1. Two envelope fields: `signer`, `expiry`. No envelope field for signer binding. No future-valid / `valid_after` field; see [`envelope-expiry.md`](envelope-expiry.md) §3.
 2. One system contract: `AuthManager`, holding both keyed nonce streams and registered signers. Immutable.
 3. `ECRECOVER` ABI unchanged.
 4. Universal coverage on activation day for nonce streams and `expiry`; opt-in PQ signer binding via registration.
@@ -114,7 +114,7 @@ Error codes:
 
 | Code | Name |
 |---|---|
-| -32010..-32011 | Expiry codes (see [`validity-windows.md`](validity-windows.md) §8) |
+| -32010..-32011 | Expiry codes (see [`envelope-expiry.md`](envelope-expiry.md) §8) |
 | -32014 | `signer_not_registered` |
 | -32015 | `too_many_active_signers` |
 | -32016..-32018 | Pubkey-side codes (see [`signer-binding.md`](signer-binding.md) §7) |

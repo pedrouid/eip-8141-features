@@ -30,7 +30,7 @@ Non-goals:
 - Pruning / reclamation of nonce-stream slots (v2).
 - Block-builder binding aggregation (defer to PQ stage 2).
 - Cross-tx binding. Inline envelope pubkeys.
-- Recurring scheduling, on-chain schedulers (separate alternative if validity windows are adopted).
+- Recurring scheduling, on-chain schedulers (handled by the time-bound alternatives Envelope expiry / Validity windows if adopted).
 
 ## 4. Single-line spec delta
 
@@ -127,7 +127,7 @@ Per-feature analyses in [`flexible-nonces.md`](flexible-nonces.md) §8 and [`sig
 
 ## 9. Compatibility and interactions
 
-- **Validity windows** (if also adopted, as in Auth scopes): orthogonal. Future-valid tx holds its stream position until lands or expires; the verified-signers table is rebuilt per-tx.
+- **Envelope expiry / Validity windows** (if also adopted, as in Auth scopes): orthogonal. A time-bound tx holds its stream position until it lands or expires; the verified-signers table is rebuilt per-tx.
 - **Guarantors:** confirms stream-advance invariant; orthogonal to signer binding.
 - **Sighash binding:** Flexible-nonce key bound by envelope placement (Class A); binding digests sit in elided VERIFY data, integrity covered by signature-over-pubkey check (Class B). See [`appendix/sighash-binding.md`](../appendix/sighash-binding.md).
 - **vs. shipping each individually across upgrades:** same protocol surface, one upgrade's review effort, shared system-contract precedent, shared mempool reasoning.

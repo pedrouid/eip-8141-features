@@ -130,7 +130,7 @@ Wallet UX: key 0 shown as "Main sequence #n"; known keys labeled by wallet conve
 ## 9. Compatibility and interactions
 
 - **Guarantors:** reinforces stream-advance-on-inclusion invariant.
-- **Validity windows:** orthogonal. A future-valid tx holds its stream position until it lands or expires; doesn't block other streams.
+- **Envelope expiry / Validity windows:** orthogonal. Time-bound txs hold stream position until landing or expiry.
 - **Signer binding:** orthogonal. Binding scope is tx-local; nonce-stream selection is tx-level.
 - **Sighash binding:** resolved by envelope placement (Class A; see [`appendix/sighash-binding.md`](../appendix/sighash-binding.md)).
 - **vs. ERC-4337:** 4337 packs key+seq into one `uint256` because it lives above the protocol. 8141 uses two independent envelope fields. Universal EOA coverage, no bundler.

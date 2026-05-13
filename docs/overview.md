@@ -2,13 +2,13 @@
 
 Account abstraction already exists on Ethereum via ERC-4337 (above the protocol) and EIP-7702 (delegating to code). EIP-8141 is the **native AA upgrade**: it lifts AA to the native protocol layer with a frame-based transaction model. This repo proposes an expansion of that upgrade.
 
-The repo carries one consolidated proposal ([`/eip-8141.md`](../eip-8141.md), which executes Auth scopes) plus five alternative scopes preserved for comparison. The load-bearing-weight argument behind the chosen bundle, including which compromises are acceptable if scope must shrink, is in [`priorities.md`](priorities.md).
+The repo carries one consolidated proposal ([`/eip-8141.md`](../eip-8141.md), which executes Auth scopes) plus six alternative scopes preserved for comparison. The load-bearing-weight argument behind the chosen bundle, including which compromises are acceptable if scope must shrink, is in [`priorities.md`](priorities.md).
 
 Status legend:
 
 - **Current EIP-8141:** external upstream spec. See [eip8141.io Current Spec](https://eip8141.io/current-spec), [Merged Changes](https://eip8141.io/merged-changes), and the [EIP text](https://eips.ethereum.org/EIPS/eip-8141).
-- **Guarantors:** companion feature in flight as [PR #11555](https://github.com/ethereum/EIPs/pull/11555); folded into the consolidated proposal here.
-- **Flexible nonces, signer binding, expiry:** the three additions on top.
+- **Guarantors:** companion in flight as [PR #11555](https://github.com/ethereum/EIPs/pull/11555); folded in here.
+- **Flexible nonces, signer binding, envelope expiry:** the three additions on top. Validity windows is the two-sided sibling alternative to Envelope expiry, preserved for comparison.
 
 Reader paths: core devs, [`/eip-8141.md`](../eip-8141.md) + [`compare.md`](compare.md) + referenced appendices. Wallet devs, README + priorities + proposal RPC/UX. Infra devs, mempool tiers + system contracts + RPC. App devs, proposal UX and compatibility.
 
@@ -21,17 +21,18 @@ The proposals expand EIP-8141 rather than replace it. Every alternative includes
 
 Alternatives differ in which combination of three independent features is added on top:
 
-- **Flexible nonces**, aka 2D nonces. Standalone: envelope `nonce_key` (uint256, `NonceManager`); aggregated: envelope `signer` (uint64, `AuthManager`) so the stream selector is the registered signer's id.
+- **Flexible nonces**, aka 2D nonces. Standalone: envelope `nonce_key` (uint256, `NonceManager`); aggregated: envelope `signer` (uint64, `AuthManager`).
 - **Signer binding** (registry-backed; `PubkeyRegistry` standalone or `AuthManager` aggregated; tx-scoped verified-signers table).
-- **Expiry** (envelope `expiry`).
+- **Time-bound transactions.** Two mutually-exclusive shapes: **Validity windows** (`valid_after` + `valid_before`) and **Envelope expiry** (one-sided `expiry`). Auth scopes folds in Envelope expiry; trade-off in [`priorities.md`](priorities.md).
 
 | Alternative | Doc | Features | Registry |
 |---|---|---|---|
 | Flexible nonces | [`proposals/flexible-nonces.md`](proposals/flexible-nonces.md) | Flexible nonces | `NonceManager` |
 | Signer binding | [`proposals/signer-binding.md`](proposals/signer-binding.md) | Signer binding | `PubkeyRegistry` |
-| Expiry | [`proposals/validity-windows.md`](proposals/validity-windows.md) | Expiry | none |
+| Validity windows | [`proposals/validity-windows.md`](proposals/validity-windows.md) | `valid_after` + `valid_before` | none |
+| Envelope expiry | [`proposals/envelope-expiry.md`](proposals/envelope-expiry.md) | One-sided `expiry` | none |
 | Key streams | [`proposals/key-streams.md`](proposals/key-streams.md) | Flexible nonces + signer binding | `AuthManager` |
-| Auth scopes | [`proposals/auth-scopes.md`](proposals/auth-scopes.md) | Flexible nonces + signer binding + expiry | `AuthManager` |
+| Auth scopes | [`proposals/auth-scopes.md`](proposals/auth-scopes.md) | Flexible nonces + signer binding + envelope expiry | `AuthManager` |
 
 The consolidated [`/eip-8141.md`](../eip-8141.md) is the PR-shaped execution of Auth scopes; the aggregated proposals collapse the two standalone registries into a single `AuthManager`. See [`appendix/system-contracts.md`](appendix/system-contracts.md) for the contract specs and [`compare.md`](compare.md) for the delta map.
 
@@ -39,85 +40,66 @@ The consolidated [`/eip-8141.md`](../eip-8141.md) is the PR-shaped execution of 
 
 Each alternative deploys exactly the contracts it requires:
 
-- Expiry: none (envelope-only).
-- Flexible nonces: `NonceManager` (constant `NONCE_MANAGER`).
-- Signer binding: `PubkeyRegistry` (constant `PUBKEY_REGISTRY`).
-- Key streams: `AuthManager` (constant `AUTH_MANAGER`); merges `NonceManager` + `PubkeyRegistry`.
-- Auth scopes: `AuthManager`; expiry adds no contract.
+- Validity windows, Envelope expiry: none (envelope-only).
+- Flexible nonces: `NonceManager` (`NONCE_MANAGER`).
+- Signer binding: `PubkeyRegistry` (`PUBKEY_REGISTRY`).
+- Key streams, Auth scopes: `AuthManager` (`AUTH_MANAGER`), merging `NonceManager` + `PubkeyRegistry`.
 
 ## Per-alternative analysis
 
 ### Flexible nonces
 
-**Protocol surface**: 1 envelope field (`nonce_key`), 1 system contract (`NonceManager`), 1 pre-tx system call, per-stream mempool rules, `eth_getTransactionCountByKey`.
+**Protocol surface**: 1 envelope field (`nonce_key`), 1 system contract (`NonceManager`), 1 pre-tx system call, per-stream mempool rules, `eth_getTransactionCountByKey`. Clean precedent (EIP-4788, EIP-2935); state-growth bounded by SSTORE cost + mempool caps; FOCIL needs cross-client tests on per-stream RBF.
 
-**Core-dev**: clean precedent (EIP-4788, EIP-2935). State-growth bounded by SSTORE cost + mempool caps. FOCIL needs cross-client tests on per-stream RBF.
-
-**User impact**: solves stuck txs for EOAs; supports nullifier-as-nonce for native accounts; makes parallel guarantor sponsorship tractable. Universal EOA coverage on activation day.
-
-**What it leaves on the table**: PQ accounts still locked out of immutable `ECRECOVER` callers; signature staleness unaddressed.
+**User impact**: solves stuck txs for EOAs; supports nullifier-as-nonce for native accounts; makes parallel guarantor sponsorship tractable. Universal EOA coverage on activation day. PQ accounts still locked out of immutable `ECRECOVER` callers; signature staleness unaddressed.
 
 ### Signer binding
 
-**Protocol surface**: 1 system contract (`PubkeyRegistry`), tx-scoped verified-signers table, `ECRECOVER` hit-path-first lookup, RPC additions, `MAX_BOUND_SIGNERS = 8` cap.
+**Protocol surface**: 1 system contract (`PubkeyRegistry`), tx-scoped verified-signers table, `ECRECOVER` hit-path-first lookup, RPC additions, `MAX_BOUND_SIGNERS = 8` cap. No envelope changes, no opcodes; `ECRECOVER` miss-path byte-identical; restrictive-tier admission is one storage slot read.
 
-**Core-dev**: no envelope changes, no opcodes, no precompile changes. `ECRECOVER` miss-path byte-identical. Restrictive-tier admission is one storage slot read.
+**User impact**: PQ accounts work with existing immutable contracts (`permit`, WETH, Uniswap V2 pairs). Closes the "EIP-8141 doesn't fix PQ for existing contracts" gap. Stuck-tx and signature-staleness gaps untouched.
 
-**User impact**: PQ accounts work with existing immutable contracts (`permit`, WETH, Uniswap V2 pairs). Closes the "EIP-8141 doesn't fix PQ for existing contracts" gap.
+### Validity windows
 
-**What it leaves on the table**: stuck-tx problem and signature staleness untouched.
+**Protocol surface**: 2 envelope fields (`valid_after`, `valid_before`), pre-tx time check on both bounds + reverse-window rejection, future-valid mempool buffer with deferral horizon and gossip threshold, four error codes. Envelope-only and FOCIL-friendly; mempool policy non-trivial.
 
-### Expiry
+**User impact**: intent deadlines plus native scheduled activation (signed tx held by nodes until `valid_after`). Stuck-tx and PQ-recovery gaps untouched. Mutually exclusive with Envelope expiry.
 
-**Protocol surface**: 1 envelope field (`expiry`), 1 pre-tx time check. No state, no contracts, no future-valid mempool state.
+### Envelope expiry
 
-**Core-dev**: smallest change in the set. Envelope-only, deterministic, FOCIL-friendly.
+**Protocol surface**: 1 envelope field (`expiry`), 1 pre-tx time check, two error codes. No state, no contracts, no future-valid mempool state. Strict subset of Validity windows; smallest change in the set.
 
-**User impact**: intent flows (signed-order DEXes, cross-chain bridges, RFQ aggregators, gasless swaps) get consensus-enforced deadlines, ending reliance on filler timing. Trading and cross-chain swaps land in a bounded window; async actions and stale-signature attacks fall under the same primitive.
-
-**What it leaves on the table**: stuck-tx and PQ-recovery gaps untouched. Scheduled activation deferred offchain; rationale in [`proposals/validity-windows.md`](proposals/validity-windows.md) §3.
+**User impact**: intent flows (signed-order DEXes, bridges, RFQ aggregators, gasless swaps) get consensus-enforced deadlines, ending reliance on filler timing. Trading and atomic-swap deadlines land in the same primitive. Scheduled activation deferred offchain; head-to-head rationale in [`proposals/envelope-expiry.md`](proposals/envelope-expiry.md) §3.
 
 ### Key streams (Flexible nonces + signer binding)
 
-**Protocol surface**: 1 envelope field, 1 system contract (`AuthManager`, holding both nonce streams and signer entries), 1 pre-tx system call, RPC additions, `ECRECOVER` extension, joint mempool caps.
+**Protocol surface**: 1 envelope field, 1 system contract (`AuthManager`, holding both nonce streams and signer entries), 1 pre-tx system call, RPC additions, `ECRECOVER` extension, joint mempool caps. Merged `AuthManager` collapses two registries into one address and code-hash; one upgrade's review effort instead of two.
 
-**Core-dev**: same EIP-4788 system-contract pattern; merged `AuthManager` collapses two registries into one address and one code-hash; same restrictive-tier reasoning; one upgrade's review effort instead of two.
+**User impact**: stuck-tx problem solved and PQ accounts unblocked for legacy `ECRECOVER`. Signature staleness still unaddressed. Either component pull-able without invalidating the other.
 
-**User impact**: stuck-tx problem solved and PQ accounts unblocked for legacy `ECRECOVER`. Signature staleness still unaddressed.
+### Auth scopes (Flexible nonces + signer binding + envelope expiry)
 
-**Resilience**: either component pull-able without invalidating the other; the nonce and signer halves of `AuthManager` do not cross-reference at the storage layer.
+**Protocol surface**: 2 envelope fields, 1 system contract (`AuthManager`), 1 pre-tx system call + 1 pre-tx time check, RPC additions, `ECRECOVER` extension, joint mempool rules. Largest alternative; three orthogonal features sharing one upgrade's review.
 
-### Auth scopes (all three)
+**User impact**: complete vocabulary across stream, time, and subject dimensions. No stuck txs, no stale sigs, PQ accounts unblocked. Any of the three pull-able without invalidating the other two.
 
-**Protocol surface**: 2 envelope fields, 1 system contract (`AuthManager`), 1 pre-tx system call + 1 pre-tx time check, RPC additions, `ECRECOVER` extension, joint mempool rules.
-
-**Core-dev**: largest alternative. Three orthogonal features sharing one upgrade's review. Cross-proposal interactions need cross-client tests.
-
-**User impact**: complete vocabulary across stream, time, and subject dimensions. No stuck txs, no stale sigs, PQ accounts unblocked.
-
-**Resilience**: any of the three pull-able without invalidating the other two.
-
-**Reference execution**: [`/eip-8141.md`](../eip-8141.md) is the consolidated EIP draft for this bundle; reference contracts under [`assets/eip-8141/`](../assets/eip-8141/).
+**Reference execution**: [`/eip-8141.md`](../eip-8141.md) is the consolidated EIP draft; reference contracts under [`assets/eip-8141/`](../assets/eip-8141/).
 
 ## Comparison
 
-| | Flexible nonces | Signer binding | Expiry | Key streams | Auth scopes |
-|---|---|---|---|---|---|
-| New envelope fields | 1 | 0 | 1 | 1 | 2 |
-| New system contracts | 1 (`NonceManager`) | 1 (`PubkeyRegistry`) | 0 | 1 (`AuthManager`) | 1 (`AuthManager`) |
-| New tx-scoped state | 1 (guarantor) | 1 (guarantor) + verified-signers table | 1 (guarantor) | 1 (guarantor) + verified-signers table | 1 (guarantor) + verified-signers table |
-| Pre-tx checks added | 1 (stream) | 0 (validation-time) | 1 (expiry) | 1 (stream) | 2 (stream + expiry) |
-| `ECRECOVER` extended? | no | yes (hit-path-first) | no | yes | yes |
-| Mempool policy additions | per-stream RBF, stream caps | binding cap | expired eviction | per-stream RBF, stream + binding caps | per-stream RBF, stream + expiry + binding caps |
-| RPC additions | `eth_getTransactionCountByKey` | `eth_getRegisteredPubkey`, `eth_simulateSignerBinding` | 2 error codes | nonce + binding RPCs | nonce + binding + 8 error codes |
-| Account-encoding changes | 0 | 0 | 0 | 0 | 0 |
-| Core-invariant changes | 0 | 0 | 0 | 0 | 0 |
-| New opcodes | 0 | 0 | 0 | 0 | 0 |
-| New precompiles | 0 | 0 | 0 | 0 | 0 |
+| | Flexible nonces | Signer binding | Validity windows | Envelope expiry | Key streams | Auth scopes |
+|---|---|---|---|---|---|---|
+| New envelope fields | 1 | 0 | 2 | 1 | 1 | 2 |
+| New system contracts | 1 (`NonceManager`) | 1 (`PubkeyRegistry`) | 0 | 0 | 1 (`AuthManager`) | 1 (`AuthManager`) |
+| Pre-tx checks added | 1 (stream) | 0 (validation-time) | 1 (both + reverse) | 1 (expiry) | 1 (stream) | 2 (stream + expiry) |
+| `ECRECOVER` extended? | no | yes | no | no | yes | yes |
+| Mempool additions | per-stream RBF | binding cap | future-valid buffer + gossip threshold + expired eviction | expired eviction | per-stream RBF + binding cap | per-stream RBF + expiry + binding cap |
+| RPC additions | `eth_getTransactionCountByKey` | `eth_getRegisteredPubkey`, `eth_simulateSignerBinding` | 4 error codes | 2 error codes | nonce + binding RPCs | nonce + binding + 8 error codes |
+| Account-encoding / opcodes / precompiles | 0 | 0 | 0 | 0 | 0 | 0 |
 
 ## What every alternative shares
 
-Guarantors (PR #11555) in every column. Zero new opcodes, precompiles, account-encoding, or core-invariant changes. In aggregated alternatives, dropping one component does not invalidate the others. Each proposal ends with a compact EIP-ready delta.
+Guarantors (PR #11555) in every column. Zero new opcodes, precompiles, account-encoding, or core-invariant changes. Each proposal ends with a compact EIP-ready delta.
 
 ## Test plan
 
@@ -126,16 +108,13 @@ Guarantors (PR #11555) in every column. Zero new opcodes, precompiles, account-e
 - FOCIL inclusion tests for restrictive-tier admissibility, expired-tx rejection, attester-visible invariants.
 - RPC compatibility tests for legacy `eth_getTransactionCount`, added nonce/pubkey RPCs, expiry error codes, byte-identical `ECRECOVER` miss-path.
 
+Validity windows additionally requires tests for future-valid buffering, gossip-threshold release, and reverse-window rejection; not needed for the consolidated draft.
+
 ## How to choose
 
-The consolidated [`/eip-8141.md`](../eip-8141.md) ships Auth scopes as the default bundle; alternatives are preserved as comparison surface and compromise paths. Weights:
+The consolidated [`/eip-8141.md`](../eip-8141.md) ships Auth scopes as the default bundle; alternatives are preserved as comparison surface and compromise paths. Weights: core-dev review burden in one cycle, urgency of each user-visible problem, resilience to any one feature being pulled late, smallest reviewable change vs. largest user-visible delta credibly shippable.
 
-- Core-dev review burden in one cycle.
-- Urgency of each user-visible problem (stuck txs vs. PQ migration vs. stale sigs).
-- Resilience to any one feature being pulled late.
-- "Smallest reviewable change that helps" vs. "most user-visible delta we can credibly ship".
-
-[`priorities.md`](priorities.md) argues Auth scopes as default with Key streams and Signer binding as defensible compromises; standalone Flexible nonces and Expiry are ruled out under the one-upgrade constraint.
+[`priorities.md`](priorities.md) argues Auth scopes as default with Key streams and Signer binding as defensible compromises; standalone Flexible nonces, Validity windows, and Envelope expiry are ruled out under the one-upgrade constraint. The same doc argues Envelope expiry over Validity windows on cost-per-envelope-byte grounds.
 
 ## Design discipline
 

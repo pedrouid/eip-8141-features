@@ -28,9 +28,15 @@ _Single canonical definition per term used in this repo. Each entry tagged `(cur
 
 **`NonceManager`** _(introduced here)_. Immutable system contract holding per-account per-key 64-bit sequence numbers. Used by the standalone Flexible-nonces alternative. Spec: [`appendix/system-contracts.md`](appendix/system-contracts.md).
 
-**Expiry** _(introduced here)_. Envelope-level transaction deadline via `expiry`. Spec: [`proposals/validity-windows.md`](proposals/validity-windows.md).
+**Envelope expiry** _(introduced here)_. One-sided envelope-level transaction deadline via `expiry`. Folded into Auth scopes and the consolidated EIP. Spec: [`proposals/envelope-expiry.md`](proposals/envelope-expiry.md).
+
+**Validity windows** _(introduced here)_. Two-sided envelope-level validity bounds via `valid_after` + `valid_before`. Sibling alternative to Envelope expiry; preserved for comparison, not folded into the consolidated EIP. Spec: [`proposals/validity-windows.md`](proposals/validity-windows.md).
 
 **`expiry`** _(introduced here)_. Envelope field, `uint64`, unix seconds; 0 = no bound. A tx is consensus-invalid if `block.timestamp >= expiry`. There is no lower bound; scheduled activation is handled offchain by deferring submission.
+
+**`valid_after`** _(Validity windows only)_. Envelope field, `uint64`, unix seconds; 0 = no lower bound. A tx is consensus-invalid unless `block.timestamp > valid_after`.
+
+**`valid_before`** _(Validity windows only)_. Envelope field, `uint64`, unix seconds; 0 = no upper bound. A tx is consensus-invalid unless `block.timestamp < valid_before`. Equivalent to `expiry` in the Envelope expiry alternative.
 
 **Signer binding** _(introduced here)_. Tx-scoped mechanism letting a PQ VERIFY frame bind `(digest, address)` claims that `ECRECOVER` resolves on subsequent calls within the same tx. Spec: [`proposals/signer-binding.md`](proposals/signer-binding.md).
 

@@ -93,7 +93,7 @@ Wallet UX: surface "this tx will let `<contract>` recognize you as `<address>` v
 ## 9. Compatibility and interactions
 
 - **Flexible nonces:** orthogonal. Binding scope is tx-local; nonce-stream selection is tx-level.
-- **Validity windows:** orthogonal. The verified-signers table is rebuilt per-tx; window enforcement runs before any frame.
+- **Envelope expiry / Validity windows:** orthogonal. The verified-signers table is rebuilt per-tx; expiry / window enforcement runs before any frame.
 - **Guarantors:** orthogonal. A guarantor-backed tx may include binding PQ VERIFY frames; the guarantor's commitment is independent.
 - **EIP-8151:** complementary. EIP-8151 zeros revoked-key recovery; signer binding provides the positive PQ path for the same address.
 - **EIP-8164:** complementary. EIP-8164 reserves an address space rooted in a PQ pubkey hash; signer binding lets that address be recognized by immutable `ECRECOVER` callers.
