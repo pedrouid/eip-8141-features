@@ -40,13 +40,13 @@ _Conformance cases that any client implementation of [`/eip-8141.md`](../../eip-
 - **Binding payload (`sub_mode = 0x01`)**: signature verifies over `application_digest`; the frame MUST NOT call `APPROVE` for execution, payment, or guarantee scopes.
 - **Pubkey rotation between mempool admission and inclusion**: bindings are rebuilt at execution time; the resolved pubkey is whatever `AUTH_MANAGER.getSigner` returns at execution.
 
-## Validity windows
+## Expiry
 
-- **Future-valid at `block.timestamp == valid_after`**: tx is invalid (exclusive bound).
-- **Ready at `block.timestamp == valid_after + 1`**: tx is valid.
-- **Expired at `block.timestamp == valid_before`**: tx is invalid (exclusive bound).
-- **Reverse window** (`valid_after >= valid_before`, both non-zero): tx is statically invalid.
-- **Replacement future-valid window**: a replacement that itself fails the window check is rejected.
+- **Ready at `expiry == 0`**: tx is valid regardless of `block.timestamp`.
+- **Ready at `block.timestamp == expiry - 1`**: tx is valid.
+- **Expired at `block.timestamp == expiry`**: tx is invalid (exclusive bound).
+- **Expired at `block.timestamp > expiry`**: tx is invalid.
+- **Replacement expiry**: a replacement that itself fails the expiry check is rejected.
 
 ## AuthManager invariants
 
@@ -74,7 +74,7 @@ _Conformance cases that any client implementation of [`/eip-8141.md`](../../eip-
 
 JSON fixtures should accompany each section. At minimum:
 
-- RLP envelope encodings with `signer`, `nonce`, `valid_after`, `valid_before`.
+- RLP envelope encodings with `signer`, `nonce`, `expiry`.
 - `compute_sig_hash` and `compute_frame_sig_hash` vectors with multiple VERIFY frames.
 - TXPARAM and FRAMEPARAM return values for representative txs.
 - Canonical paymaster guarantor-mode signature over `TXPARAM(0x0B)`.

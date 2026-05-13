@@ -19,7 +19,7 @@ Several use cases share a common shape: a single account-wide nonce forces unrel
 
 **Multi-step workflows.** High-frequency trading bots, market makers, and mass-payout systems (payroll, airdrops, grants) submit many txs in parallel. With one nonce stream, a single stuck or failed tx halts the rest; operators today run sharded addresses or accept the bottleneck. Flexible nonces let each workflow run on its own stream.
 
-**Privacy pools.** Once EIP-8141 lets contracts originate transactions, a privacy pool (Tornado-style, Aztec-style) becomes a sender in its own right: any member can redeem via the pool. A single account-wide nonce serialises every redemption, forcing members to coordinate ordering. The natural ordering primitive is already the nullifier (one-time-redeemable); Flexible nonces let each nullifier-derived key index its own stream. Mostly relevant to native (contract) accounts, not EOAs, but load-bearing once contracts can originate.
+**Privacy pools.** Once EIP-8141 lets contracts originate transactions, a privacy pool (nullifier-based, shielded-pool, anonymous-mixer) becomes a sender in its own right: any member can redeem via the pool. A single account-wide nonce serialises every redemption, forcing members to coordinate ordering. The natural ordering primitive is already the nullifier (one-time-redeemable); Flexible nonces let each nullifier-derived key index its own stream. Mostly relevant to native (contract) accounts, not EOAs, but load-bearing once contracts can originate.
 
 **Guarantors for ERC-20 repayment.** A guarantor sponsoring many ERC-20-paid txs in parallel must advance a nonce per sponsorship for replay protection but cannot serialise every sponsorship through one guarantor nonce without bottlenecking throughput. Flexible nonces give each sponsorship its own stream. The two features compose: Flexible nonces make broad guarantor adoption tractable, and guarantors confirm the stream-advance-on-inclusion invariant Flexible nonces rely on (see [`appendix/guarantors.md`](../appendix/guarantors.md)).
 
@@ -130,7 +130,7 @@ Wallet UX: key 0 shown as "Main sequence #n"; known keys labeled by wallet conve
 ## 9. Compatibility and interactions
 
 - **Guarantors:** reinforces stream-advance-on-inclusion invariant.
-- **Validity windows:** orthogonal. A future-valid tx holds its stream position until it lands or expires; doesn't block other streams.
+- **Envelope expiry / Validity windows:** orthogonal. Time-bound txs hold stream position until landing or expiry.
 - **Signer binding:** orthogonal. Binding scope is tx-local; nonce-stream selection is tx-level.
 - **Sighash binding:** resolved by envelope placement (Class A; see [`appendix/sighash-binding.md`](../appendix/sighash-binding.md)).
 - **vs. ERC-4337:** 4337 packs key+seq into one `uint256` because it lives above the protocol. 8141 uses two independent envelope fields. Universal EOA coverage, no bundler.
