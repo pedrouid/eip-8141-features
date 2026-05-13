@@ -147,8 +147,12 @@ Upstream `ethereum/EIPs` runs two checks on `EIPS/eip-8141.md` on every PR push.
 
 ### eipw (EIP Walidator)
 
-- **`markdown-no-backticks`**: no inline-code span (`` `...` ``) may contain a substring matching `(?i)(eip|erc)-[0-9]+`. This includes filepath references that contain `eip-8141` (e.g. `assets/eip-8141/AuthManager.sol`). Use plain text or link syntax instead: write `assets/eip-8141/AuthManager.sol` (no backticks) or `[assets/eip-8141/AuthManager.sol](./assets/eip-8141/AuthManager.sol)` (link without inner backticks). Never `` `assets/eip-8141/...` `` or `` [`assets/eip-8141/...`](./...) ``.
-- **`markdown-refs`**: proposals categorized as **ERC** must be cited with the `ERC-` prefix, not `EIP-`. Known ERC-category proposals we reference: `ERC-20`, `ERC-165`, `ERC-721`, `ERC-1155`, `ERC-1271`, `ERC-2612`, `ERC-4337`, `ERC-7562`. Core-track EIPs we reference (correct prefix is `EIP-`): `EIP-1559`, `EIP-2718`, `EIP-2929`, `EIP-2935`, `EIP-3607`, `EIP-4788`, `EIP-4844`, `EIP-7623`, `EIP-7702`, `EIP-7819`, `EIP-7997`, `EIP-8141`. When in doubt, check the `category:` field of the target EIP's front matter.
+- **`markdown-no-backticks`**: no inline-code span (`` `...` ``) may contain a substring matching `(?i)(eip|erc)-[0-9]+`. This includes filepath references that contain `eip-8141` (e.g. `assets/eip-8141/AuthManager.sol`). Use plain text or link syntax instead.
+- **`markdown-refs`**: any prose token matching `(?i)(eip|erc)-[0-9]+` is parsed as a proposal reference and must use the canonical-case prefix for that proposal's `category:`. **Core**-track EIPs use `EIP-`; **ERC**-track proposals use `ERC-`. This applies to visible markdown text including **link text**, but NOT to URLs. So `[AuthManager reference contract](./assets/eip-8141/AuthManager.sol)` is fine (URL contains lowercase `eip-8141`, but link text doesn't), whereas `[assets/eip-8141/AuthManager.sol](./assets/eip-8141/AuthManager.sol)` fails (link text contains lowercase `eip-8141`, EIP-8141 is Core, must be `EIP-`). **Rule of thumb**: when linking into `./assets/eip-8141/...`, use a descriptive link text that does NOT contain the `eip-8141` substring (e.g. `[AuthManager reference contract]`, `[canonical paymaster reference contract]`, `[the AuthManager.sol asset]`).
+- **Known correct prefixes for proposals we reference**:
+  - Core (use `EIP-`): EIP-1559, EIP-2718, EIP-2929, EIP-2935, EIP-3607, EIP-4788, EIP-4844, EIP-7623, EIP-7702, EIP-7819, EIP-7997, EIP-8141.
+  - ERC (use `ERC-`): ERC-20, ERC-165, ERC-721, ERC-1155, ERC-1271, ERC-2612, ERC-4337, ERC-7562.
+  - When in doubt, check the `category:` field of the target proposal's front matter.
 
 ### markdownlint
 
