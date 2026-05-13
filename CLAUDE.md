@@ -95,7 +95,7 @@ Principles every proposal follows. **Deviating requires explicit justification i
 
 5. **Don't inherit from contract-era ERCs.** ERC-4337 makes compromises (192-bit key packing, bundler enforcement, `isValidSignature` naming) because it lives above the protocol. EIP-8141 has the freedom to choose better shapes; exercise it.
 6. **Crypto-agnostic and account-agnostic interfaces.** Use `validateAuth(digest, proof)`, not ERC-1271. No field, parameter, or vocabulary should privilege any signature scheme or account type.
-7. **Curve-specific data confined to `docs/appendix/pq-analysis.md`.** Proposals stay scheme-agnostic. Concrete scheme parameters (ML-DSA, Falcon, SLH-DSA, MAYO) live in the background doc and the `signature_type` registry; not in the proposals.
+7. **Curve-specific data confined to `docs/appendix/pq-analysis.md`.** Proposals stay scheme-agnostic in their *spec text* (envelope fields, mempool rules, consensus checks, interface signatures): no field, parameter, or vocabulary should privilege any signature scheme. Concrete scheme parameters (pubkey sizes, signature sizes, verify costs) live in `pq-analysis.md` and the `signature_type` registry. **Citing cryptographic curve / scheme names by name is fine anywhere** (secp256k1, ML-DSA, Falcon, SLH-DSA, MAYO, SPHINCS+, Dilithium, etc.): they are cryptographic primitives, not project / vendor names, and naming them in motivation, rationale, or load-bearing arguments is allowed and often necessary.
 
 ### Binding and envelope discipline
 
@@ -116,7 +116,7 @@ Signer binding uses a canonical signer registry (`PubkeyRegistry` standalone, `A
 ## Writing style
 
 - **No emojis.**
-- **Em dashes restricted.** Allowed only in titles with subtitles, labelled dates, or list/table topic separators. Never as parentheticals, colon substitutes, or in prose. Rewrite with commas, periods, semicolons, colons, or parentheses.
+- **Em dashes restricted.** Allowed only in titles with subtitles, labelled dates, or list/table topic separators. Never as parentheticals, colon substitutes, or in prose. Rewrite with commas, periods, semicolons, colons, or parentheses. **Exception: upstream verbatim.** Em dashes inside text copied verbatim from upstream EIP-8141 are preserved unconditionally; the verbatim-preservation rule supersedes the em-dash rule.
 - **Avoid `base` terminology.** Use "current EIP-8141", "current spec", "upstream spec", "existing rule", or "shared context".
 - **Direct and terse.** No filler, no trailing summaries.
 - **No author attribution.** No scratch-doc disclaimer.
@@ -168,6 +168,6 @@ If the consolidated bundle changes (e.g., a feature drops to a smaller alternati
 
 - Consistency pass: grep for stale references. Examples: stale `lanesRoot`; stale envelope `pubkeys` field; aggregated proposals + consolidated EIP must use `AuthManager`; standalone Flexible-nonces uses `NonceManager` and standalone Signer-binding uses `PubkeyRegistry`.
 - Verify `overview.md`, proposals, `compare.md`, and `eip-8141.md` agree on names, fields, and constants.
-- No curve-specific names (ML-DSA, Falcon, SLH-DSA, SPHINCS+, MAYO, Dilithium) in proposals; those belong in `pq-analysis.md`.
+- Curve / scheme parameter *data* (pubkey sizes, signature sizes, verify costs) belongs in `pq-analysis.md`. Citing curve / scheme *names* (ML-DSA, Falcon, SLH-DSA, SPHINCS+, MAYO, Dilithium, secp256k1) in proposals, rationale, or arguments is fine: they are cryptographic primitives, not project names.
 - No author attributions, no scratch-doc disclaimer.
-- No em-dashes. Word-count targets met for every doc except `eip-8141.md` (exempt).
+- No em-dashes, except inside text copied verbatim from upstream EIP-8141 (upstream verbatim is preserved unconditionally). Word-count targets met for every doc except `eip-8141.md` (exempt).
