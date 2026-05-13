@@ -12,7 +12,7 @@ _Single canonical definition per term used in this repo. Each entry tagged `(cur
 
 **Default code** _(current EIP-8141)_. The protocol-supplied bytecode that runs in a VERIFY frame for an EOA that has not delegated to custom code. Default code is where standard tx authentication lives.
 
-**APPROVE scope** _(current EIP-8141; guarantors proposed in PR #11555)_. The opcode emitted by a VERIFY frame to set tx-scoped state. Current scopes approve execution, payment, or both; guarantor encoding is still draft.
+**APPROVE scope** _(current EIP-8141; guarantors proposed in PR #11555)_. The opcode emitted by a VERIFY frame to set tx-scoped state. Current scopes approve execution, payment, or both; this proposal adds `APPROVE_GUARANTEE` (`0x4`) as a fourth scope bit.
 
 **sighash** _(current EIP-8141)_. The hash signed by the tx-level signature, computed by `compute_sig_hash`. VERIFY-frame `data` is elided; SENDER frames are not. See [`appendix/sighash-binding.md`](appendix/sighash-binding.md).
 

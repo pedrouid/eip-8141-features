@@ -12,6 +12,8 @@ Primary comparison points:
 - Guarantors: [PR #11555](https://github.com/ethereum/EIPs/pull/11555/files)
 - Keyed nonces: [PR #11598](https://github.com/ethereum/EIPs/pull/11598/files), draft EIP-8250
 
+Upstream cleanup PRs already merged and absorbed into the baseline above: [#11621](https://github.com/ethereum/EIPs/pull/11621) (Frames cleanup, section-name restructuring) and [#11652](https://github.com/ethereum/EIPs/pull/11652) (atomic batching with any frames). Deltas below are stated against post-merge upstream.
+
 ## Compared To Current EIP-8141
 
 The current spec defines frame transactions, `APPROVE`, default EOA verification, a canonical signature hash, per-frame execution, and restrictive mempool prefixes. This proposal keeps that architecture but changes the transaction surface and authentication model.

@@ -2,10 +2,10 @@ Extend EIP-8141 from just a new transaction type into a complete native AA upgra
 
 **Features included:**
 
-- **Guarantors** — payer primitive making txs public-mempool admissible even when sender validation may fail; enables ERC-20 paymaster repayment safely.
-- **Flexible Nonces** — keyed nonce streams per sender; concurrent submission for privacy-pool withdrawals, recurring actions, and intents.
-- **Signer Binding** — registry-only `(sender, signer_id) → (pubkey, type)`; spans secp256k1, lattice, multivariate, hash-based; inline pubkeys rejected.
-- **Envelope Expiry** — protocol-enforced deadline via `expiry` envelope field; tx invalid when `block.timestamp >= expiry`; ready/expired only, no future-valid.
+- **Guarantors**: payer primitive making txs public-mempool admissible even when sender validation may fail; enables ERC-20 paymaster repayment safely.
+- **Flexible Nonces**: keyed nonce streams per sender; concurrent submission for privacy-pool withdrawals, recurring actions, and intents.
+- **Signer Binding**: registry-only `(sender, signer_id) → (pubkey, type)`; spans secp256k1, lattice, multivariate, hash-based; inline pubkeys rejected.
+- **Envelope Expiry**: protocol-enforced deadline via `expiry` envelope field; tx invalid when `block.timestamp >= expiry`; ready/expired only, no future-valid.
 
 **Protocol additions:**
 
@@ -17,8 +17,8 @@ Extend EIP-8141 from just a new transaction type into a complete native AA upgra
 
 **Related Proposals**
 
-1. Guarantors — [PR #11555](https://github.com/ethereum/EIPs/pull/11555)
-2. Keyed Nonces — [PR #11598](https://github.com/ethereum/EIPs/pull/11598)
-3. Key Delegation — [EIP-8164](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-8164.md)
+1. Guarantors: [PR #11555](https://github.com/ethereum/EIPs/pull/11555)
+2. Keyed Nonces: [PR #11598](https://github.com/ethereum/EIPs/pull/11598)
+3. Key Delegation: [EIP-8164](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-8164.md)
 
 Authors of those proposals are credited in the `author` header.
