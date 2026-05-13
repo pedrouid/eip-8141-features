@@ -12,4 +12,8 @@ EIP-8141 is the one realistic chance to lift account abstraction into the protoc
 
 **Envelope expiry** is a separate concern with a tiny surface: one `uint64` field, no system contract, no per-account state. It lifts the offchain deadline used by every intent, swap, and settlement flow into a consensus-enforced field, removing filler timing as a trust assumption. Zero per-tx state beyond the envelope itself; it composes cleanly with the statelessness roadmap.
 
-PR: [ethereum/EIPs#11643](https://github.com/ethereum/EIPs/pull/11643). Background and history: [eip8141.io](https://eip8141.io).
+---
+
+**Read the full story.** Six alternative scopes, ranking arguments, reference implementations, and the path that got us here: [eip8141.io](https://eip8141.io).
+
+**Weigh in on the PR.** Wallet teams, paymaster authors, and post-quantum implementers especially: feedback while the spec is open is what determines what ships. [ethereum/EIPs#11643](https://github.com/ethereum/EIPs/pull/11643).
