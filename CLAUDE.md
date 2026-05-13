@@ -40,8 +40,9 @@ The consolidated `eip-8141.md` ships Auth scopes. `AuthManager` is the canonical
 ## Repository structure
 
 ```
-eip-8141.md                 # Consolidated modified EIP draft (executes Auth scopes)
-eip-8141.diff               # Diff against upstream EIPS/eip-8141.md
+EIPS/
+├── eip-8141.md             # Consolidated modified EIP draft (executes Auth scopes)
+└── eip-8141.diff           # Diff against upstream EIPS/eip-8141.md
 
 assets/eip-8141/
 ├── AuthManager.sol         # Reference impl of the canonical authentication-state contract
@@ -141,9 +142,17 @@ Signer binding uses a canonical signer registry (`PubkeyRegistry` standalone, `A
 
 ---
 
-## CI lint rules for `eip-8141.md`
+## CI lint rules for `EIPS/eip-8141.md`
 
-Upstream `ethereum/EIPs` runs two checks on `EIPS/eip-8141.md` on every PR push. The same constraints apply to our `eip-8141.md` because we copy it verbatim into the PR branch. Violations block PR #11643.
+Upstream `ethereum/EIPs` runs three checks on `EIPS/eip-8141.md` on every PR push. The same constraints apply to our `EIPS/eip-8141.md` because we copy it verbatim into the PR branch. Violations block PR #11643.
+
+### Repository layout (mirrors upstream)
+
+Our repo mirrors `ethereum/EIPs`: the canonical draft lives at `EIPS/eip-8141.md` (not at the repo root) and assets at `assets/eip-8141/`. Relative links from `EIPS/eip-8141.md` to assets must therefore be `../assets/eip-8141/...`, NOT `./assets/eip-8141/...`. Using `./assets/...` resolves to `EIPS/assets/...` which does not exist and fails html-proofer.
+
+### html-proofer
+
+- All relative-link targets in `EIPS/eip-8141.md` must resolve to real files when the EIP is rendered as part of the `ethereum/EIPs` Jekyll site. From `EIPS/eip-8141.html` (the rendered location), assets resolve at `../assets/eip-8141/...`. Always use that prefix; never `./assets/...`.
 
 ### eipw (EIP Walidator)
 

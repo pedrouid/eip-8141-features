@@ -2,7 +2,7 @@
 
 Account abstraction already exists on Ethereum via ERC-4337 (above the protocol) and EIP-7702 (delegating to code). EIP-8141 is the **native AA upgrade**: it lifts AA to the native protocol layer with a frame-based transaction model. This repo proposes an expansion of that upgrade.
 
-The repo carries one consolidated proposal ([`/eip-8141.md`](../eip-8141.md), which executes Auth scopes) plus six alternative scopes preserved for comparison. The load-bearing-weight argument behind the chosen bundle, including which compromises are acceptable if scope must shrink, is in [`priorities.md`](priorities.md).
+The repo carries one consolidated proposal ([`/eip-8141.md`](../EIPS/eip-8141.md), which executes Auth scopes) plus six alternative scopes preserved for comparison. The load-bearing-weight argument behind the chosen bundle, including which compromises are acceptable if scope must shrink, is in [`priorities.md`](priorities.md).
 
 Status legend:
 
@@ -10,7 +10,7 @@ Status legend:
 - **Guarantors:** companion in flight as [PR #11555](https://github.com/ethereum/EIPs/pull/11555); folded in here.
 - **Flexible nonces, signer binding, envelope expiry:** the three additions on top. Validity windows is the two-sided sibling alternative to Envelope expiry, preserved for comparison.
 
-Reader paths: core devs, [`/eip-8141.md`](../eip-8141.md) + [`compare.md`](compare.md) + referenced appendices. Wallet devs, README + priorities + proposal RPC/UX. Infra devs, mempool tiers + system contracts + RPC. App devs, proposal UX and compatibility.
+Reader paths: core devs, [`/eip-8141.md`](../EIPS/eip-8141.md) + [`compare.md`](compare.md) + referenced appendices. Wallet devs, README + priorities + proposal RPC/UX. Infra devs, mempool tiers + system contracts + RPC. App devs, proposal UX and compatibility.
 
 ## Expanded native AA upgrade
 
@@ -34,7 +34,7 @@ Alternatives differ in which combination of three independent features is added 
 | Key streams | [`proposals/key-streams.md`](proposals/key-streams.md) | Flexible nonces + signer binding | `AuthManager` |
 | Auth scopes | [`proposals/auth-scopes.md`](proposals/auth-scopes.md) | Flexible nonces + signer binding + envelope expiry | `AuthManager` |
 
-The consolidated [`/eip-8141.md`](../eip-8141.md) is the PR-shaped execution of Auth scopes; the aggregated proposals collapse the two standalone registries into a single `AuthManager`. See [`appendix/system-contracts.md`](appendix/system-contracts.md) for the contract specs and [`compare.md`](compare.md) for the delta map.
+The consolidated [`/eip-8141.md`](../EIPS/eip-8141.md) is the PR-shaped execution of Auth scopes; the aggregated proposals collapse the two standalone registries into a single `AuthManager`. See [`appendix/system-contracts.md`](appendix/system-contracts.md) for the contract specs and [`compare.md`](compare.md) for the delta map.
 
 ### Contract requirements per alternative
 
@@ -83,7 +83,7 @@ Each alternative deploys exactly the contracts it requires:
 
 **User impact**: complete vocabulary across stream, time, and subject dimensions. No stuck txs, no stale sigs, PQ accounts unblocked. Any of the three pull-able without invalidating the other two.
 
-**Reference execution**: [`/eip-8141.md`](../eip-8141.md) is the consolidated EIP draft; reference contracts under [`assets/eip-8141/`](../assets/eip-8141/).
+**Reference execution**: [`/eip-8141.md`](../EIPS/eip-8141.md) is the consolidated EIP draft; reference contracts under [`assets/eip-8141/`](../assets/eip-8141/).
 
 ## Comparison
 
@@ -112,7 +112,7 @@ Validity windows additionally requires tests for future-valid buffering, gossip-
 
 ## How to choose
 
-The consolidated [`/eip-8141.md`](../eip-8141.md) ships Auth scopes as the default bundle; alternatives are preserved as comparison surface and compromise paths. Weights: core-dev review burden in one cycle, urgency of each user-visible problem, resilience to any one feature being pulled late, smallest reviewable change vs. largest user-visible delta credibly shippable.
+The consolidated [`/eip-8141.md`](../EIPS/eip-8141.md) ships Auth scopes as the default bundle; alternatives are preserved as comparison surface and compromise paths. Weights: core-dev review burden in one cycle, urgency of each user-visible problem, resilience to any one feature being pulled late, smallest reviewable change vs. largest user-visible delta credibly shippable.
 
 [`priorities.md`](priorities.md) argues Auth scopes as default with Key streams and Signer binding as defensible compromises; standalone Flexible nonces, Validity windows, and Envelope expiry are ruled out under the one-upgrade constraint. The same doc argues Envelope expiry over Validity windows on cost-per-envelope-byte grounds.
 

@@ -5,7 +5,7 @@ Canonical for:  guarantor payer semantics, draft PR #11555, mempool relaxation
 Referenced by:  every alternative
 ```
 
-_Origin: [PR #11555](https://github.com/ethereum/EIPs/pull/11555) (derekchiang, Apr 22). The consolidated [`/eip-8141.md`](../../eip-8141.md) folds guarantors directly into the EIP; the standalone proposals in this repo all ship "EIP-8141 + guarantors + the proposal's features." Encoding choices below match the consolidated draft._
+_Origin: [PR #11555](https://github.com/ethereum/EIPs/pull/11555) (derekchiang, Apr 22). The consolidated [`/eip-8141.md`](../../EIPS/eip-8141.md) folds guarantors directly into the EIP; the standalone proposals in this repo all ship "EIP-8141 + guarantors + the proposal's features." Encoding choices below match the consolidated draft._
 
 ## What guarantors are
 

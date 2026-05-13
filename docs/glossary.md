@@ -44,7 +44,7 @@ _Single canonical definition per term used in this repo. Each entry tagged `(cur
 
 **`PubkeyRegistry`** _(introduced here)_. Immutable system contract holding per-account `(scheme, pubkey)` for PQ accounts. Used by the standalone Signer-binding alternative. Spec: [`appendix/system-contracts.md`](appendix/system-contracts.md).
 
-**`AuthManager`** _(introduced here)_. Immutable system contract holding both keyed nonce streams and per-account signer entries `(scheme, pubkey)`. Replaces `NonceManager` + `PubkeyRegistry` in the Key-streams and Auth-scopes alternatives, and in the consolidated [`/eip-8141.md`](../eip-8141.md) execution. Spec: [`appendix/system-contracts.md`](appendix/system-contracts.md). Reference impl: [`assets/eip-8141/AuthManager.sol`](../assets/eip-8141/AuthManager.sol).
+**`AuthManager`** _(introduced here)_. Immutable system contract holding both keyed nonce streams and per-account signer entries `(scheme, pubkey)`. Replaces `NonceManager` + `PubkeyRegistry` in the Key-streams and Auth-scopes alternatives, and in the consolidated [`/eip-8141.md`](../EIPS/eip-8141.md) execution. Spec: [`appendix/system-contracts.md`](appendix/system-contracts.md). Reference impl: [`assets/eip-8141/AuthManager.sol`](../assets/eip-8141/AuthManager.sol).
 
 **Guarantor** _(adjacent, [PR #11555](https://github.com/ethereum/EIPs/pull/11555))_. A tx-scoped role that commits to paying gas if sender VERIFY fails. Lets shared-state-read risk be priced as economic risk rather than mempool-policy risk. Spec: [`appendix/guarantors.md`](appendix/guarantors.md).
 

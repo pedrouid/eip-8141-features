@@ -12,7 +12,7 @@ Shared appendices:  system-contracts, verified-signers, mempool-tiers,
 
 ## 1. Status and scope
 
-Aggregated alternative. All three features in one upgrade: Flexible nonces + signer binding + envelope expiry. This doc is the merged spec; sections labelled **Inherited from §X** restate component content, sections labelled **New** cover the cross-feature analysis. Constraints respected (no new opcodes, precompiles, frame modes, account-encoding changes, sighash changes) are listed in [`docs/overview.md`](../overview.md). Identified as the maximum viable bundle in [`docs/priorities.md`](../priorities.md). The consolidated EIP draft [`/eip-8141.md`](../../eip-8141.md) is the PR-shaped execution of this proposal; [`docs/compare.md`](../compare.md) is the delta map against upstream.
+Aggregated alternative. All three features in one upgrade: Flexible nonces + signer binding + envelope expiry. This doc is the merged spec; sections labelled **Inherited from §X** restate component content, sections labelled **New** cover the cross-feature analysis. Constraints respected (no new opcodes, precompiles, frame modes, account-encoding changes, sighash changes) are listed in [`docs/overview.md`](../overview.md). Identified as the maximum viable bundle in [`docs/priorities.md`](../priorities.md). The consolidated EIP draft [`/eip-8141.md`](../../EIPS/eip-8141.md) is the PR-shaped execution of this proposal; [`docs/compare.md`](../compare.md) is the delta map against upstream.
 
 ## 2. Motivation
 
@@ -170,4 +170,4 @@ Per-feature analyses in components apply. **New** cross-feature considerations:
 7. RPC + error codes as listed (two expiry codes + signer/binding codes).
 8. Mempool: per-stream RBF, expired eviction, `MAX_ACTIVE_SIGNERS_PER_SENDER = 16`, `MAX_BOUND_SIGNERS = 8`, block-invalidation rule.
 9. Stream advance on inclusion regardless of VERIFY outcome (normative).
-10. Reference execution: [`/eip-8141.md`](../../eip-8141.md) is the consolidated EIP draft and [`assets/eip-8141/`](../../assets/eip-8141/) holds the reference contracts (`AuthManager.sol`, `CanonicalPaymaster.sol`).
+10. Reference execution: [`/eip-8141.md`](../../EIPS/eip-8141.md) is the consolidated EIP draft and [`assets/eip-8141/`](../../assets/eip-8141/) holds the reference contracts (`AuthManager.sol`, `CanonicalPaymaster.sol`).

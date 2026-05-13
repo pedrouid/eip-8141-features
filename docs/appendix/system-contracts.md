@@ -75,7 +75,7 @@ Registration is SSTORE-from-zero plus pubkey calldata. Clearing is SSTORE-to-zer
 
 ## 3. AuthManager (merged, used by Key streams and Auth scopes)
 
-`AuthManager` is the merged form of the two standalone registries above. Both signer entries and nonce streams are keyed by `(account, signer)` where `signer: uint64` is chosen by the account at registration. `signer == 0` is reserved for the legacy ECDSA / account-nonce path and never holds a stored entry. The standalone `nonce_key` is replaced by `signer` here because indexing streams or signer entries by raw PQ pubkey is impossible, lattice and multivariate pubkeys are kilobyte-scale; the small uint64 `signer` is the indirection. Used by [`proposals/key-streams.md`](../proposals/key-streams.md), [`proposals/auth-scopes.md`](../proposals/auth-scopes.md), and the consolidated [`/eip-8141.md`](../../eip-8141.md) execution.
+`AuthManager` is the merged form of the two standalone registries above. Both signer entries and nonce streams are keyed by `(account, signer)` where `signer: uint64` is chosen by the account at registration. `signer == 0` is reserved for the legacy ECDSA / account-nonce path and never holds a stored entry. The standalone `nonce_key` is replaced by `signer` here because indexing streams or signer entries by raw PQ pubkey is impossible, lattice and multivariate pubkeys are kilobyte-scale; the small uint64 `signer` is the indirection. Used by [`proposals/key-streams.md`](../proposals/key-streams.md), [`proposals/auth-scopes.md`](../proposals/auth-scopes.md), and the consolidated [`/eip-8141.md`](../../EIPS/eip-8141.md) execution.
 
 ```solidity
 contract AuthManager {

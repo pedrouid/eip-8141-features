@@ -8,9 +8,9 @@ Account abstraction already exists on Ethereum via ERC-4337 (above the protocol)
 
 ## How to review this repo
 
-The canonical artifact is [`eip-8141.md`](eip-8141.md): the consolidated modified EIP draft, all four features folded in. [`docs/summary.md`](docs/summary.md) is the PR-body summary intended for upstream `ethereum/EIPs` submission. [`docs/compare.md`](docs/compare.md) is the delta map against upstream EIP-8141 and the related PRs. The reference contracts under [`assets/eip-8141/`](assets/eip-8141/) define the **canonical observable semantics** (entry points, ordering, errors, events); clients MAY implement equivalent native behavior outside EVM bytecode for performance, but whichever shape ships is code-hash pinned at activation. The six proposals under [`docs/proposals/`](docs/proposals/) are alternative scopes preserved for comparison; the consolidated draft executes the maximum bundle (Auth scopes). [`docs/appendix/test-matrix.md`](docs/appendix/test-matrix.md) lists conformance cases.
+The canonical artifact is [`eip-8141.md`](EIPS/eip-8141.md): the consolidated modified EIP draft, all four features folded in. [`docs/summary.md`](docs/summary.md) is the PR-body summary intended for upstream `ethereum/EIPs` submission. [`docs/compare.md`](docs/compare.md) is the delta map against upstream EIP-8141 and the related PRs. The reference contracts under [`assets/eip-8141/`](assets/eip-8141/) define the **canonical observable semantics** (entry points, ordering, errors, events); clients MAY implement equivalent native behavior outside EVM bytecode for performance, but whichever shape ships is code-hash pinned at activation. The six proposals under [`docs/proposals/`](docs/proposals/) are alternative scopes preserved for comparison; the consolidated draft executes the maximum bundle (Auth scopes). [`docs/appendix/test-matrix.md`](docs/appendix/test-matrix.md) lists conformance cases.
 
-- **Core devs:** read [`eip-8141.md`](eip-8141.md), then [`docs/compare.md`](docs/compare.md), then the appendix specs referenced.
+- **Core devs:** read [`eip-8141.md`](EIPS/eip-8141.md), then [`docs/compare.md`](docs/compare.md), then the appendix specs referenced.
 - **Wallet devs:** read this README, [`docs/priorities.md`](docs/priorities.md), and the wallet UX sections in proposals.
 - **Infra devs:** read [`docs/appendix/mempool-tiers.md`](docs/appendix/mempool-tiers.md), [`docs/appendix/system-contracts.md`](docs/appendix/system-contracts.md), and the RPC sections.
 - **App devs:** read the wallet UX and compatibility sections.
@@ -23,7 +23,7 @@ Terminology used across the docs is defined once in [`docs/glossary.md`](docs/gl
 
 The repo carries one consolidated proposal plus six alternative scopes preserved for comparison.
 
-- **Consolidated proposal**, [`eip-8141.md`](eip-8141.md): the modified EIP draft. Adds guarantors, keyed nonce streams, signer binding, and an envelope `expiry` field. Single canonical authentication-state contract `AuthManager`. Reference contracts in [`assets/eip-8141/`](assets/eip-8141/). Delta map in [`docs/compare.md`](docs/compare.md).
+- **Consolidated proposal**, [`eip-8141.md`](EIPS/eip-8141.md): the modified EIP draft. Adds guarantors, keyed nonce streams, signer binding, and an envelope `expiry` field. Single canonical authentication-state contract `AuthManager`. Reference contracts in [`assets/eip-8141/`](assets/eip-8141/). Delta map in [`docs/compare.md`](docs/compare.md).
 - **Six alternative scopes** under [`docs/proposals/`](docs/proposals/): four individual features and two aggregated bundles, kept as the comparison surface. The consolidated proposal executes the Auth-scopes bundle, which folds in Envelope expiry (not Validity windows); the rationale is in [`docs/priorities.md`](docs/priorities.md).
 
 Status legend:
@@ -41,7 +41,7 @@ Status legend:
 | Key streams | [`docs/proposals/key-streams.md`](docs/proposals/key-streams.md) | Flexible nonces + signer binding | `AuthManager` (merged) |
 | Auth scopes | [`docs/proposals/auth-scopes.md`](docs/proposals/auth-scopes.md) | Flexible nonces + signer binding + envelope expiry | `AuthManager` (merged) |
 
-The consolidated [`eip-8141.md`](eip-8141.md) is the PR-shaped execution of Auth scopes.
+The consolidated [`eip-8141.md`](EIPS/eip-8141.md) is the PR-shaped execution of Auth scopes.
 
 Flexible nonces, Key streams, and Auth scopes are complementary to Guarantors: they reduce contention, isolate sponsorship flows, and bound authorization risk, which makes Guarantors more viable in public mempools.
 
@@ -52,8 +52,9 @@ See [`docs/overview.md`](docs/overview.md) for the per-alternative analysis and 
 ## Repository structure
 
 ```
-eip-8141.md                 # Consolidated modified EIP draft (executes Auth scopes)
-eip-8141.diff               # Diff against upstream EIPS/eip-8141.md
+EIPS/
+├── eip-8141.md             # Consolidated modified EIP draft (executes Auth scopes)
+└── eip-8141.diff           # Diff against upstream EIPS/eip-8141.md
 
 assets/eip-8141/
 ├── AuthManager.sol         # Reference impl of the canonical authentication-state contract
@@ -112,7 +113,7 @@ Principles every proposal follows. Deviations require explicit justification.
 
 ### Alternative selection
 
-- The consolidated [`eip-8141.md`](eip-8141.md) executes the Auth-scopes bundle (all three features) under the one-upgrade constraint argued in [`docs/priorities.md`](docs/priorities.md). The five alternatives in [`docs/proposals/`](docs/proposals/) are preserved as the comparison surface.
+- The consolidated [`eip-8141.md`](EIPS/eip-8141.md) executes the Auth-scopes bundle (all three features) under the one-upgrade constraint argued in [`docs/priorities.md`](docs/priorities.md). The five alternatives in [`docs/proposals/`](docs/proposals/) are preserved as the comparison surface.
 
 ---
 

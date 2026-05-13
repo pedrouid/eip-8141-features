@@ -5,7 +5,7 @@ Canonical for:  consensus, mempool, and reference-contract test cases for the co
 Referenced by:  eip-8141.md (Errata and integration), CLAUDE.md (research-cycle close-out)
 ```
 
-_Conformance cases that any client implementation of [`/eip-8141.md`](../../eip-8141.md) and any reference-contract change to [`assets/eip-8141/`](../../assets/eip-8141/) MUST pass before external review._
+_Conformance cases that any client implementation of [`/eip-8141.md`](../../EIPS/eip-8141.md) and any reference-contract change to [`assets/eip-8141/`](../../assets/eip-8141/) MUST pass before external review._
 
 ## Hashing
 

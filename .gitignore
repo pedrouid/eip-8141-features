@@ -1,1 +1,4 @@
 .claude/settings.local.json
+*.log
+# CI logs the user pastes locally for debugging
+*.log
