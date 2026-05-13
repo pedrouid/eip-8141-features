@@ -1,6 +1,6 @@
-# One PR, Not Four
+# One Contract, Two Envelope Fields, Four Features
 
-_Why EIP-8141 should land as a bundle._
+_Why EIP-8141 should land all four upgrades as a single bundle._
 
 EIP-8141 is the one realistic chance to lift account abstraction into the protocol layer. The PR at [ethereum/EIPs#11643](https://github.com/ethereum/EIPs/pull/11643) bundles four additions: **guarantors**, **flexible nonces**, **signer binding**, and **envelope expiry**. The first three are not independent. Splitting them costs more code, not less.
 
