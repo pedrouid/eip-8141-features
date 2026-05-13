@@ -8,7 +8,7 @@ Instructions for AI agents and contributors working on this repository.
 
 This repo proposes an **expansion of [EIP-8141](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-8141.md)** (Frame Transaction), the **native AA upgrade** for Ethereum. AA already exists via ERC-4337 and EIP-7702; EIP-8141 lifts AA to the native protocol layer. The repo carries one consolidated proposal and five alternative scopes preserved for comparison. Each is iterated against core dev and wallet dev review pressure.
 
-**Canonical artifact:** `eip-8141.md` is the consolidated modified EIP draft, executing the Auth-scopes bundle (guarantors + flexible nonces + signer binding + envelope expiry) under a single `AuthManager` system contract. `docs/compare.md` is the delta map vs upstream and related PRs.
+**Canonical artifact:** `eip-8141.md` is the consolidated modified EIP draft, executing the Auth-scopes bundle (guarantors + flexible nonces + signer binding + envelope expiry) under a single `AuthManager` system contract. `docs/compare.md` is the delta map vs upstream and related PRs. `docs/summary.md` is the PR-body summary used when submitting upstream to `ethereum/EIPs`; keep it in sync whenever the consolidated bundle changes.
 
 **Alternatives** under `docs/proposals/` are kept as the comparison surface and as compromise paths if scope shrinks. `docs/overview.md` enumerates them; `docs/priorities.md` argues the load-bearing-weight ranking, ruling out standalone Flexible nonces, Validity windows, and Envelope expiry, and arguing Envelope expiry over Validity windows on cost-per-envelope-byte grounds.
 
@@ -54,6 +54,7 @@ docs/
 ├── priorities.md           # Load-bearing-weight argument; ranks bundles
 ├── compare.md              # Delta map for eip-8141.md vs upstream and related PRs
 ├── glossary.md             # Single canonical definition per term
+├── summary.md              # PR-body summary for upstream ethereum/EIPs submission
 │
 ├── proposals/              # Six alternative scopes; consolidated EIP executes Auth scopes
 │   ├── flexible-nonces.md
@@ -160,7 +161,8 @@ If the consolidated bundle changes (e.g., a feature drops to a smaller alternati
 3. Relevant proposal doc(s) under `docs/proposals/`.
 4. `docs/overview.md` if analysis, comparison table, or open uncertainties move.
 5. `docs/priorities.md` if the ranking shifts.
-6. `README.md` TL;DR.
+6. `docs/summary.md` so the upstream PR-body stays accurate.
+7. `README.md` TL;DR.
 
 ## When closing out a research cycle
 

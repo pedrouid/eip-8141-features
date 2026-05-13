@@ -8,7 +8,7 @@ Account abstraction already exists on Ethereum via ERC-4337 (above the protocol)
 
 ## How to review this repo
 
-The canonical artifact is [`eip-8141.md`](eip-8141.md): the consolidated modified EIP draft, all four features folded in. [`docs/compare.md`](docs/compare.md) is the delta map against upstream EIP-8141 and the related PRs. The reference contracts under [`assets/eip-8141/`](assets/eip-8141/) define the **canonical observable semantics** (entry points, ordering, errors, events); clients MAY implement equivalent native behavior outside EVM bytecode for performance, but whichever shape ships is code-hash pinned at activation. The six proposals under [`docs/proposals/`](docs/proposals/) are alternative scopes preserved for comparison; the consolidated draft executes the maximum bundle (Auth scopes). [`docs/appendix/test-matrix.md`](docs/appendix/test-matrix.md) lists conformance cases.
+The canonical artifact is [`eip-8141.md`](eip-8141.md): the consolidated modified EIP draft, all four features folded in. [`docs/summary.md`](docs/summary.md) is the PR-body summary intended for upstream `ethereum/EIPs` submission. [`docs/compare.md`](docs/compare.md) is the delta map against upstream EIP-8141 and the related PRs. The reference contracts under [`assets/eip-8141/`](assets/eip-8141/) define the **canonical observable semantics** (entry points, ordering, errors, events); clients MAY implement equivalent native behavior outside EVM bytecode for performance, but whichever shape ships is code-hash pinned at activation. The six proposals under [`docs/proposals/`](docs/proposals/) are alternative scopes preserved for comparison; the consolidated draft executes the maximum bundle (Auth scopes). [`docs/appendix/test-matrix.md`](docs/appendix/test-matrix.md) lists conformance cases.
 
 - **Core devs:** read [`eip-8141.md`](eip-8141.md), then [`docs/compare.md`](docs/compare.md), then the appendix specs referenced.
 - **Wallet devs:** read this README, [`docs/priorities.md`](docs/priorities.md), and the wallet UX sections in proposals.
@@ -66,6 +66,7 @@ docs/
 ├── priorities.md           # Load-bearing-weight argument; ranks bundles
 ├── compare.md              # Delta map for eip-8141.md vs upstream + related PRs
 ├── glossary.md             # Single canonical definition per term
+├── summary.md              # PR-body summary for upstream ethereum/EIPs submission
 │
 ├── proposals/              # Six alternative scopes; consolidated EIP executes Auth scopes
 │   ├── flexible-nonces.md            # Individual: Flexible nonces (NonceManager)

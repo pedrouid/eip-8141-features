@@ -92,7 +92,7 @@ Signer binding is new relative to current EIP-8141, PR #11555, and PR #11598. It
 - Modified `ECRECOVER`: table hit returns the bound address; miss follows existing secp256k1 behavior.
 - `MAX_BOUND_SIGNERS = 8`.
 
-Envelope expiry is also new relative to those specs. The motivating use-case is intent-style flows (signed-order DEXes, cross-chain bridges, RFQ aggregators, gasless swaps): consensus-enforced deadlines on the settlement tx itself, so filler timing stops being a trust assumption. It adds:
+Envelope expiry is also new relative to those specs. The motivating use-case is intent and deadline-sensitive flows: consensus-enforced deadlines on the settlement tx itself, so filler timing stops being a trust assumption. Full motivation in [`proposals/envelope-expiry.md`](proposals/envelope-expiry.md) §2. No reference contract delta accompanies this addition; expiry is envelope-only. It adds:
 
 - `expiry` envelope field (uint64, unix seconds; 0 = no bound).
 - Pre-frame timestamp check with an exclusive upper bound: `block.timestamp >= expiry` invalidates the tx.
@@ -109,4 +109,4 @@ Current EIP-8141 has `assets/eip-8141/CanonicalPaymaster.sol`. This proposal cha
 - `CanonicalPaymaster.sol`: adds guarantor mode, `APPROVE_GUARANTEE`, frame-signature-hash validation, and guarantor nonce support.
 - `AuthManager.sol`: new single authentication-state system contract for keyed nonces and registered signers.
 
-No separate nonce-manager or pubkey-registry asset is used.
+No separate nonce-manager or pubkey-registry asset is used. No asset is added for `expiry`; it is envelope-only with no contract or storage side.

@@ -16,7 +16,7 @@ Aggregated alternative. All three features in one upgrade: Flexible nonces + sig
 
 ## 2. Motivation
 
-Together, the three features give every EIP-8141 account a protocol-level vocabulary across three dimensions of **authorization scoping**: stream (`signer`), time (`expiry`), and subject (PQ accounts via signer binding). Wallets can express "this signed tx is authorized on stream X, until time T, by account A whose PQ pubkey is registered" without leaving consensus. The `expiry` half is what makes intent-style flows (signed-order DEXes, cross-chain bridges, RFQ aggregators, gasless swaps) consensus-enforceable end-to-end: their deadlines stop relying on filler honesty and become an admission rule every node respects.
+Together, the three features give every EIP-8141 account a protocol-level vocabulary across three dimensions of **authorization scoping**: stream (`signer`), time (`expiry`), and subject (PQ accounts via signer binding). Wallets can express "this signed tx is authorized on stream X, until time T, by account A whose PQ pubkey is registered" without leaving consensus. The `expiry` half makes intent and deadline-sensitive flows consensus-enforceable end-to-end (full enumeration in [`envelope-expiry.md`](envelope-expiry.md) §2): deadlines stop relying on filler honesty and become an admission rule every node respects.
 
 ## 3. Priorities and non-goals
 
@@ -106,7 +106,7 @@ Tier semantics in [`appendix/mempool-tiers.md`](../appendix/mempool-tiers.md).
 
 ```
 eth_getTransactionCountBySigner(address, signer, blockTag) → uint64
-eth_getRegisteredPubkey(address, blockTag)                 → (uint16, bytes) | null
+eth_getRegisteredPubkey(address, signer, blockTag)         → (uint16, bytes) | null
 eth_simulateSignerBinding(tx)                              → list[(digest, address)]
 ```
 
