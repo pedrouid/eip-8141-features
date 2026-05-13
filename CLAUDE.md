@@ -141,6 +141,23 @@ Signer binding uses a canonical signer registry (`PubkeyRegistry` standalone, `A
 
 ---
 
+## CI lint rules for `eip-8141.md`
+
+Upstream `ethereum/EIPs` runs two checks on `EIPS/eip-8141.md` on every PR push. The same constraints apply to our `eip-8141.md` because we copy it verbatim into the PR branch. Violations block PR #11643.
+
+### eipw (EIP Walidator)
+
+- **`markdown-no-backticks`**: no inline-code span (`` `...` ``) may contain a substring matching `(?i)(eip|erc)-[0-9]+`. This includes filepath references that contain `eip-8141` (e.g. `assets/eip-8141/AuthManager.sol`). Use plain text or link syntax instead: write `assets/eip-8141/AuthManager.sol` (no backticks) or `[assets/eip-8141/AuthManager.sol](./assets/eip-8141/AuthManager.sol)` (link without inner backticks). Never `` `assets/eip-8141/...` `` or `` [`assets/eip-8141/...`](./...) ``.
+- **`markdown-refs`**: proposals categorized as **ERC** must be cited with the `ERC-` prefix, not `EIP-`. Known ERC-category proposals we reference: `ERC-20`, `ERC-165`, `ERC-721`, `ERC-1155`, `ERC-1271`, `ERC-2612`, `ERC-4337`, `ERC-7562`. Core-track EIPs we reference (correct prefix is `EIP-`): `EIP-1559`, `EIP-2718`, `EIP-2929`, `EIP-2935`, `EIP-3607`, `EIP-4788`, `EIP-4844`, `EIP-7623`, `EIP-7702`, `EIP-7819`, `EIP-7997`, `EIP-8141`. When in doubt, check the `category:` field of the target EIP's front matter.
+
+### markdownlint
+
+- **`MD031/blanks-around-fences`**: every fenced code block (`` ``` ``) needs a blank line above and a blank line below, including when the fence is indented inside an ordered or unordered list. The list-item text continuation must also be separated from the closing fence by a blank line.
+
+These rules apply only to `eip-8141.md` (the upstream-shaped draft). Other docs in `docs/` are not validated by upstream CI, so the rules are advisory there; still follow them for consistency.
+
+---
+
 ## When picking up work
 
 1. Read `eip-8141.md` and `docs/compare.md` first; they describe the consolidated proposal and what it changes vs upstream.
