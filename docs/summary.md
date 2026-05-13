@@ -4,7 +4,7 @@ Extend EIP-8141 from just a new transaction type into a complete native AA upgra
 
 - **Guarantors**: payer primitive making txs public-mempool admissible even when sender validation may fail; enables ERC-20 paymaster repayment safely.
 - **Flexible Nonces**: keyed nonce streams per sender; concurrent submission for privacy-pool withdrawals, recurring actions, and intents.
-- **Signer Binding**: registry-only `(sender, signer_id) → (pubkey, type)`; spans secp256k1, lattice, multivariate, hash-based; inline pubkeys rejected.
+- **Signer Binding**: registry-only `(sender, signer) → (pubkey, type)`; spans secp256k1, lattice, multivariate, hash-based; inline pubkeys rejected.
 - **Envelope Expiry**: protocol-enforced deadline via `expiry` envelope field; tx invalid when `block.timestamp >= expiry`; ready/expired only, no future-valid.
 
 **Protocol additions:**
