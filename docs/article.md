@@ -14,6 +14,6 @@ EIP-8141 is the one realistic chance to lift account abstraction into the protoc
 
 ---
 
-**Learn the background.** Six alternative scopes, ranking arguments, reference implementations, and the path that got us here: [eip8141.io](https://eip8141.io).
+**Learn the background.** The history and evolution of EIP-8141, and what the current spec can already do today: [eip8141.io](https://eip8141.io).
 
 **Review the PR.** Wallet teams, paymaster authors, and post-quantum implementers especially: feedback while the spec is open is what determines what ships. [ethereum/EIPs#11643](https://github.com/ethereum/EIPs/pull/11643).
