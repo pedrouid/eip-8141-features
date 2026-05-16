@@ -1,18 +1,21 @@
 # Auth Scopes for EIP-8141
 
 ```
-Status:             research draft
+Status:             SUPERSEDED by Key streams + upstream expiry verifier frame; comparison only
 Depends on:         EIP-8141 + guarantors
 Introduces:         signer, expiry envelope fields;
                     AuthManager (merged); verified-signers table;
                     modified ECRECOVER
+                    (envelope-expiry component not adopted by the consolidated EIP)
 Shared appendices:  system-contracts, verified-signers, mempool-tiers,
                     sighash-binding, guarantors, pq-analysis
 ```
 
+> **Note.** Upstream EIP-8141 merged an in-spec **expiry verifier frame** at `EXPIRY_VERIFIER = address(0x8141)` which subsumes the envelope-expiry component of this proposal. The remaining components (`signer` envelope field, merged `AuthManager`, verified-signers table, modified `ECRECOVER`) are exactly the **Key streams** shape in [`key-streams.md`](key-streams.md), and that is what the consolidated [`/eip-8141.md`](../../EIPS/eip-8141.md) now executes. This proposal is preserved as comparison surface for the historical three-feature aggregation.
+
 ## 1. Status and scope
 
-Aggregated alternative. All three features in one upgrade: Flexible nonces + signer binding + envelope expiry. This doc is the merged spec; sections labelled **Inherited from §X** restate component content, sections labelled **New** cover the cross-feature analysis. Constraints respected (no new opcodes, precompiles, frame modes, account-encoding changes, sighash changes) are listed in [`docs/overview.md`](../overview.md). Identified as the maximum viable bundle in [`docs/priorities.md`](../priorities.md). The consolidated EIP draft [`/eip-8141.md`](../../EIPS/eip-8141.md) is the PR-shaped execution of this proposal; [`docs/compare.md`](../compare.md) is the delta map against upstream.
+Aggregated alternative. All three features in one upgrade: Flexible nonces + signer binding + envelope expiry. This doc is the merged spec; sections labelled **Inherited from §X** restate component content, sections labelled **New** cover the cross-feature analysis. Constraints respected (no new opcodes, precompiles, frame modes, account-encoding changes, sighash changes) are listed in [`docs/overview.md`](../overview.md). The envelope-expiry component is now redundant with the upstream verifier frame, so the consolidated EIP executes [`key-streams.md`](key-streams.md) instead. [`docs/compare.md`](../compare.md) is the delta map of the consolidated EIP against upstream.
 
 ## 2. Motivation
 

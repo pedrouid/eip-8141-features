@@ -40,13 +40,23 @@ _Conformance cases that any client implementation of [`/eip-8141.md`](../../EIPS
 - **Binding payload (`sub_mode = 0x01`)**: signature verifies over `application_digest`; the frame MUST NOT call `APPROVE` for execution, payment, or guarantee scopes.
 - **Pubkey rotation between mempool admission and inclusion**: bindings are rebuilt at execution time; the resolved pubkey is whatever `AUTH_MANAGER.getSigner` returns at execution.
 
-## Expiry
+## Expiry verifier frame (upstream baseline)
 
-- **Ready at `expiry == 0`**: tx is valid regardless of `block.timestamp`.
-- **Ready at `block.timestamp == expiry - 1`**: tx is valid.
-- **Expired at `block.timestamp == expiry`**: tx is invalid (exclusive bound).
-- **Expired at `block.timestamp > expiry`**: tx is invalid.
-- **Replacement expiry**: a replacement that itself fails the expiry check is rejected.
+These cases exercise the in-spec expiry verifier frame at `EXPIRY_VERIFIER = address(0x8141)`, which the consolidated EIP inherits from upstream verbatim:
+
+- **No expiry verifier frame present**: tx is valid regardless of `block.timestamp`.
+- **`block.timestamp < deadline`**: expiry verifier frame succeeds with no return data; tx continues.
+- **`block.timestamp == deadline`**: expiry verifier frame succeeds (the runtime check is `block.timestamp <= deadline`).
+- **`block.timestamp > deadline`**: expiry verifier frame reverts; tx is invalid.
+- **`len(frame.data) != EXPIRY_DATA_LENGTH`**: expiry verifier frame reverts; tx is invalid.
+- **`frame.flags != 0` or `frame.value != 0`** on an expiry verifier frame: tx is statically invalid.
+- **Two expiry verifier frames in one tx**: tx is invalid.
+- **Sighash coverage**: `compute_sig_hash` MUST preserve `frame.data` for any VERIFY frame whose `frame.target == EXPIRY_VERIFIER`; mutating the deadline bytes in transit MUST change the canonical sig hash.
+- **TIMESTAMP-opcode permission**: `TIMESTAMP` is permitted only inside the canonical expiry verifier runtime; using it from any other validation-prefix frame fails the banned-opcode rule.
+
+## Envelope expiry (alternative; not in the consolidated EIP)
+
+The Envelope-expiry alternative under [`proposals/envelope-expiry.md`](../proposals/envelope-expiry.md) is preserved only as comparison surface. Its `expiry` envelope field, pre-frame check, expiry-aware RBF rule, and `TXPARAM(0x0E)` exposure are NOT part of the consolidated EIP and have no test cases here.
 
 ## AuthManager invariants
 
@@ -74,7 +84,7 @@ _Conformance cases that any client implementation of [`/eip-8141.md`](../../EIPS
 
 JSON fixtures should accompany each section. At minimum:
 
-- RLP envelope encodings with `signer`, `nonce`, `expiry`.
+- RLP envelope encodings with `signer` and `nonce` (the consolidated EIP envelope does NOT carry an `expiry` field; deadlines live in an expiry verifier frame's `frame.data` and appear in the frame-list encoding, not the outer envelope).
 - `compute_sig_hash` and `compute_frame_sig_hash` vectors with multiple VERIFY frames.
 - TXPARAM and FRAMEPARAM return values for representative txs.
 - Canonical paymaster guarantor-mode signature over `TXPARAM(0x0B)`.

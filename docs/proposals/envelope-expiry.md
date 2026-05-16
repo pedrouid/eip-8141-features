@@ -1,11 +1,13 @@
 # Envelope Expiry for EIP-8141
 
 ```
-Status:             research draft
+Status:             SUPERSEDED by upstream expiry verifier frame; comparison only
 Depends on:         EIP-8141 + guarantors
-Introduces:         expiry envelope field
+Introduces:         expiry envelope field (not adopted by the consolidated EIP)
 Shared appendices:  mempool-tiers, sighash-binding
 ```
+
+> **Note.** Upstream EIP-8141 merged an in-spec **expiry verifier frame** at `EXPIRY_VERIFIER = address(0x8141)`: a special `VERIFY` frame whose 8-byte `frame.data` is the deadline, covered by `compute_sig_hash` via a targeted carve-out, and dropped deterministically from the public mempool when the deadline passes. That mechanism subsumes every load-bearing property of this envelope-field design without spending an envelope byte on every tx. The consolidated [`/eip-8141.md`](../../EIPS/eip-8141.md) does NOT carry an `expiry` envelope field. This proposal is preserved as comparison surface and historical record only.
 
 ## 1. Status and scope
 

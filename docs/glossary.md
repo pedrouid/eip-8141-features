@@ -28,15 +28,17 @@ _Single canonical definition per term used in this repo. Each entry tagged `(cur
 
 **`NonceManager`** _(introduced here)_. Immutable system contract holding per-account per-key 64-bit sequence numbers. Used by the standalone Flexible-nonces alternative. Spec: [`appendix/system-contracts.md`](appendix/system-contracts.md).
 
-**Envelope expiry** _(introduced here)_. One-sided envelope-level transaction deadline via `expiry`. Folded into Auth scopes and the consolidated EIP. Spec: [`proposals/envelope-expiry.md`](proposals/envelope-expiry.md).
+**Expiry verifier frame** _(current EIP-8141; merged in upstream after this repo's first PR)_. Built-in `VERIFY` frame whose `frame.target == EXPIRY_VERIFIER = address(0x8141)` and whose 8-byte `frame.data` is a unix-seconds deadline covered by `compute_sig_hash`. Public mempool drops the tx deterministically once `block.timestamp > deadline`. Used by the consolidated EIP for any deadline use-case; supersedes the Envelope-expiry alternative below.
 
-**Validity windows** _(introduced here)_. Two-sided envelope-level validity bounds via `valid_after` + `valid_before`. Sibling alternative to Envelope expiry; preserved for comparison, not folded into the consolidated EIP. Spec: [`proposals/validity-windows.md`](proposals/validity-windows.md).
+**Envelope expiry** _(introduced here; **comparison only**)_. Alternative shape adding a `uint64 expiry` envelope field. Subsumed by the upstream expiry verifier frame and dropped from the consolidated EIP. Preserved as comparison surface. Spec: [`proposals/envelope-expiry.md`](proposals/envelope-expiry.md).
 
-**`expiry`** _(introduced here)_. Envelope field, `uint64`, unix seconds; 0 = no bound. A tx is consensus-invalid if `block.timestamp >= expiry`. There is no lower bound; scheduled activation is handled offchain by deferring submission.
+**Validity windows** _(introduced here; **comparison only**)_. Two-sided envelope-level validity bounds via `valid_after` + `valid_before`. Subsumed by the upstream expiry verifier frame for the `valid_before` side; the `valid_after` (scheduled activation) component is out of scope for the consolidated EIP. Spec: [`proposals/validity-windows.md`](proposals/validity-windows.md).
 
-**`valid_after`** _(Validity windows only)_. Envelope field, `uint64`, unix seconds; 0 = no lower bound. A tx is consensus-invalid unless `block.timestamp > valid_after`.
+**`expiry`** _(Envelope-expiry alternative only; not in the consolidated EIP)_. Envelope field, `uint64`, unix seconds; 0 = no bound. A tx is consensus-invalid if `block.timestamp >= expiry`.
 
-**`valid_before`** _(Validity windows only)_. Envelope field, `uint64`, unix seconds; 0 = no upper bound. A tx is consensus-invalid unless `block.timestamp < valid_before`. Equivalent to `expiry` in the Envelope expiry alternative.
+**`valid_after`** _(Validity windows only; not in the consolidated EIP)_. Envelope field, `uint64`, unix seconds; 0 = no lower bound.
+
+**`valid_before`** _(Validity windows only; not in the consolidated EIP)_. Envelope field, `uint64`, unix seconds; 0 = no upper bound.
 
 **Signer binding** _(introduced here)_. Tx-scoped mechanism letting a PQ VERIFY frame bind `(digest, address)` claims that `ECRECOVER` resolves on subsequent calls within the same tx. Spec: [`proposals/signer-binding.md`](proposals/signer-binding.md).
 
@@ -60,7 +62,7 @@ Reference: [`appendix/mempool-tiers.md`](appendix/mempool-tiers.md).
 
 ## Sighash binding analysis _(introduced here)_
 
-**Class A binding**. Protocol-visible data whose validity depends only on the tx (e.g., `nonce_key` / `signer`, `expiry`). MUST be covered by the tx sighash; lives in the envelope.
+**Class A binding**. Protocol-visible data whose validity depends only on the tx (e.g., `nonce_key` / `signer`). MUST be covered by the tx sighash; lives in the envelope. Deadlines also fall in this class but the upstream expiry verifier frame carries them inside `frame.data` of a special `VERIFY` frame, which is exempted from VERIFY-data elision in `compute_sig_hash`, so they are sighash-covered without needing an envelope field.
 
 **Class B binding**. Protocol-visible data whose validity depends on an independent signature chain (e.g., signer-binding claims verified under a registered PQ pubkey). Does not require tx-sighash coverage.
 

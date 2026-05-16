@@ -1,11 +1,13 @@
 # Validity Windows for EIP-8141
 
 ```
-Status:             research draft
+Status:             SUPERSEDED for the upper bound by upstream expiry verifier frame; comparison only
 Depends on:         EIP-8141 + guarantors
-Introduces:         valid_after envelope field, valid_before envelope field
+Introduces:         valid_after envelope field, valid_before envelope field (not adopted by the consolidated EIP)
 Shared appendices:  mempool-tiers, sighash-binding
 ```
+
+> **Note.** Upstream EIP-8141 merged an in-spec **expiry verifier frame** at `EXPIRY_VERIFIER = address(0x8141)` which subsumes the `valid_before` (upper-bound) half of this proposal. The `valid_after` (scheduled-activation) half is intentionally out of scope for the consolidated EIP because future-valid behavior is solvable offchain by deferring submission and would impose mempool buffering, per-sender caps, and gossip-threshold rules on every node. The consolidated [`/eip-8141.md`](../../EIPS/eip-8141.md) does NOT carry validity-window envelope fields. This proposal is preserved as comparison surface only.
 
 ## 1. Status and scope
 

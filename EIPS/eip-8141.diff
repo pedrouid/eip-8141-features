@@ -5,7 +5,7 @@
  title: Frame Transaction
  description: Add frame abstraction for transaction validation, execution, and gas payment
 -author: Vitalik Buterin (@vbuterin), lightclient (@lightclient), Felix Lange (@fjl), Yoav Weiss (@yoavw), Alex Forshtat (@forshtat), Dror Tirosh (@drortirosh), Shahaf Nacson (@shahafn), Derek Chiang (@derekchiang), Toni Wahrstätter (@nerolation)
-+author: Vitalik Buterin (@vbuterin), lightclient (@lightclient), Felix Lange (@fjl), Yoav Weiss (@yoavw), Alex Forshtat (@forshtat), Dror Tirosh (@drortirosh), Shahaf Nacson (@shahafn), Derek Chiang (@derekchiang), Toni Wahrstätter (@nerolation), Pedro Gomes (@pedrouid)
++author: Vitalik Buterin (@vbuterin), lightclient (@lightclient), Felix Lange (@fjl), Yoav Weiss (@yoavw), Alex Forshtat (@forshtat), Dror Tirosh (@drortirosh), Shahaf Nacson (@shahafn), Derek Chiang (@derekchiang), Gregory Markou (@GregTheGreek), James Prestwich (@prestwich), Toni Wahrstätter (@nerolation), Pedro Gomes (@pedrouid)
  discussions-to: https://ethereum-magicians.org/t/frame-transaction/27617
  status: Draft
  type: Standards Track
@@ -239,7 +239,7 @@
  
 -`APPROVE_SCOPE_MASK` is defined as an alias for `APPROVE_EXECUTION_AND_PAYMENT`.
 +`APPROVE_SCOPE_MASK` is defined as `APPROVE_PAYMENT | APPROVE_EXECUTION | APPROVE_GUARANTEE` (`0x07`).
-+
+ 
 +Valid `scope` values are non-zero subsets of `APPROVE_SCOPE_MASK` corresponding to one of `APPROVE_PAYMENT`, `APPROVE_EXECUTION`, `APPROVE_EXECUTION_AND_PAYMENT`, or `APPROVE_GUARANTEE`. Combinations involving `APPROVE_GUARANTEE` with other scopes (e.g. `0x5`, `0x6`, `0x7`) result in an exceptional halt.
 +
 +#### Behavior
@@ -268,7 +268,7 @@
 +        - If `guarantor_approved` was already set, revert the frame.
 +        - If `resolved_target` has insufficient balance to cover the transaction's maximum cost (`TXPARAM(0x06)`), revert the frame.
 +        - Set `guarantor = resolved_target` and `guarantor_approved = true`. The guarantor's reservation is released and re-collected from the payer if a later `APPROVE_PAYMENT` overrides it; see [Guarantors](#guarantors).
- 
++
 +`APPROVE` does **not** advance the sender's nonce stream. Nonce consumption is a single, post-frame action (see [Behavior](#behavior) and [Flexible Nonces](#flexible-nonces)) that runs exactly once on successful inclusion and is outside frame rollback (including atomic-batch rollback). This single-point rule keeps replay protection consistent across the payer-paid, guarantor-paid, and sender-VERIFY-failed paths.
 +
  ### Introspection
@@ -471,7 +471,7 @@
  
  For public mempool purposes, each node maintains a local accounting value `reserved_pending_cost(paymaster)` and computes:
  
-@@ -624,15 +766,15 @@
+@@ -624,22 +766,148 @@
  
  1. A transaction is received over the wire and the node decides whether to accept or reject it.
  2. The node analyzes the frame structure and determines the validation prefix. If the prefix is not one of the recognized prefixes, reject.
@@ -492,10 +492,10 @@
  
  #### Transaction origination
  
-@@ -640,6 +782,132 @@
+ Do not apply the restriction put in place by [EIP-3607](./eip-3607.md) to frame transactions.
  Specifically, `SENDER` frames originate calls where `tx.sender` is a contract account.
  Validation logic for other transaction types remains unchanged, i.e. the transaction is only valid if the sender account's code is either empty or a valid delegation indicator.
- 
++
 +### Flexible Nonces
 +
 +This section specifies the nonce-stream semantics surfaced by `tx.signer` and `tx.nonce`.
@@ -603,7 +603,7 @@
 +#### Canonical paymaster as guarantor
 +
 +The [canonical paymaster reference contract](../assets/eip-8141/CanonicalPaymaster.sol) supports both paymaster mode (signs `TXPARAM(0x08)`) and guarantor mode (signs `TXPARAM(0x0B)`). Guarantor mode requires a follow-up sender-side `bumpNonce` frame so the canonical paymaster's per-sender guarantor nonce advances even when sender VERIFY fails; this is enforced by structural rules in the paymaster runtime (see the asset).
-+
+ 
 +### System Contracts
 +
 +At activation, clients initialize `AUTH_MANAGER` at the reserved address with the runtime semantics defined in the [AuthManager reference contract](../assets/eip-8141/AuthManager.sol), nonce `1`, and empty storage. The address is reserved and code-hash pinned by consensus. The contract holds two storage maps:
@@ -730,12 +730,7 @@
  ## Security Considerations
  
  ### Transaction Propagation
-@@ -891,10 +1237,26 @@
- 
- It's recommended that to *validate* the transaction, a specific frame structure is enforced and the amount of gas that is expended executing the validation phase must be limited. Once the validation prefix reaches payer approval via `APPROVE(APPROVE_PAYMENT)` or `APPROVE(APPROVE_EXECUTION_AND_PAYMENT)`, the transaction can be included in the mempool and propagated to peers safely.
- 
--For deployment of the sender account in the first frame, the mempool enforces deploy-frame determinism via the validation trace rules. Any contract may be used as `frame.target`, provided the frame's execution satisfies those rules — notably, it must not read mutable state outside `tx.sender` or maintain per-deploy factory storage (counters, reentrancy flags, etc.), so that the deployment result is independent of chain state. Factories deployed via the [EIP-7997](./eip-7997.md) deterministic factory predeploy are the canonical choice for acquiring a cross-chain-stable factory address.
-+For deployment of the sender account in the first frame, the mempool enforces deploy-frame determinism via the validation trace rules. Any contract may be used as `frame.target`, provided the frame's execution satisfies those rules, notably, it must not read mutable state outside `tx.sender` or maintain per-deploy factory storage (counters, reentrancy flags, etc.), so that the deployment result is independent of chain state. Factories deployed via the [EIP-7997](./eip-7997.md) deterministic factory predeploy are the canonical choice for acquiring a cross-chain-stable factory address.
+@@ -895,6 +1241,22 @@
  
  In general, it can be assumed that handling of frame transactions imposes similar restrictions as EIP-7702 on mempool relay, i.e. only a single transaction can be pending for an account that uses frame transactions.
  
