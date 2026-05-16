@@ -1,6 +1,6 @@
 # EIP-8141 Upgrade
 
-A proposal to expand the scope of [EIP-8141](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-8141.md) (Frame Transaction), the **native account-abstraction upgrade** for Ethereum. Bundles guarantors, keyed nonce streams, signer binding, and an envelope `expiry` field into the same activation, on the basis that EIP-8141 is the one realistic opportunity to lift AA into the protocol layer.
+A proposal to expand the scope of [EIP-8141](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-8141.md) (Frame Transaction), the **native account-abstraction upgrade** for Ethereum. Bundles guarantors, keyed nonce streams, and signer binding into the same activation, on the basis that EIP-8141 is the one realistic opportunity to lift AA into the protocol layer. Deadlines are covered by the upstream expiry verifier frame (`EXPIRY_VERIFIER = address(0x8141)`), so no envelope `expiry` field is added by this proposal.
 
 Account abstraction already exists on Ethereum via ERC-4337 (above the protocol) and EIP-7702 (delegating to code). EIP-8141 lifts AA to the native protocol layer with a frame-based transaction model. This repo argues that the upgrade should land doing more than the minimum, since there will not be a second pass; the consolidated proposal has been iterated against core dev and wallet dev review pressure.
 
@@ -8,7 +8,7 @@ Account abstraction already exists on Ethereum via ERC-4337 (above the protocol)
 
 ## How to review this repo
 
-The canonical artifact is [`eip-8141.md`](EIPS/eip-8141.md): the consolidated modified EIP draft, all four features folded in. [`docs/summary.md`](docs/summary.md) is the PR-body summary intended for upstream `ethereum/EIPs` submission. [`docs/compare.md`](docs/compare.md) is the delta map against upstream EIP-8141 and the related PRs. The reference contracts under [`assets/eip-8141/`](assets/eip-8141/) define the **canonical observable semantics** (entry points, ordering, errors, events); clients MAY implement equivalent native behavior outside EVM bytecode for performance, but whichever shape ships is code-hash pinned at activation. The six proposals under [`docs/proposals/`](docs/proposals/) are alternative scopes preserved for comparison; the consolidated draft executes the maximum bundle (Auth scopes). [`docs/appendix/test-matrix.md`](docs/appendix/test-matrix.md) lists conformance cases.
+The canonical artifact is [`eip-8141.md`](EIPS/eip-8141.md): the consolidated modified EIP draft, folding guarantors + flexible nonces + signer binding into upstream EIP-8141. [`docs/summary.md`](docs/summary.md) is the PR-body summary intended for upstream `ethereum/EIPs` submission. [`docs/compare.md`](docs/compare.md) is the delta map against upstream EIP-8141 and the related PRs. The reference contracts under [`assets/eip-8141/`](assets/eip-8141/) define the **canonical observable semantics** (entry points, ordering, errors, events); clients MAY implement equivalent native behavior outside EVM bytecode for performance, but whichever shape ships is code-hash pinned at activation. The six proposals under [`docs/proposals/`](docs/proposals/) are alternative scopes preserved for comparison; the consolidated draft executes Key streams + Guarantors (deadlines route through the upstream expiry verifier frame). [`docs/appendix/test-matrix.md`](docs/appendix/test-matrix.md) lists conformance cases.
 
 - **Core devs:** read [`eip-8141.md`](EIPS/eip-8141.md), then [`docs/compare.md`](docs/compare.md), then the appendix specs referenced.
 - **Wallet devs:** read this README, [`docs/priorities.md`](docs/priorities.md), and the wallet UX sections in proposals.
@@ -23,27 +23,27 @@ Terminology used across the docs is defined once in [`docs/glossary.md`](docs/gl
 
 The repo carries one consolidated proposal plus six alternative scopes preserved for comparison.
 
-- **Consolidated proposal**, [`eip-8141.md`](EIPS/eip-8141.md): the modified EIP draft. Adds guarantors, keyed nonce streams, signer binding, and an envelope `expiry` field. Single canonical authentication-state contract `AuthManager`. Reference contracts in [`assets/eip-8141/`](assets/eip-8141/). Delta map in [`docs/compare.md`](docs/compare.md).
-- **Six alternative scopes** under [`docs/proposals/`](docs/proposals/): four individual features and two aggregated bundles, kept as the comparison surface. The consolidated proposal executes the Auth-scopes bundle, which folds in Envelope expiry (not Validity windows); the rationale is in [`docs/priorities.md`](docs/priorities.md).
+- **Consolidated proposal**, [`eip-8141.md`](EIPS/eip-8141.md): the modified EIP draft. Adds guarantors, keyed nonce streams, and signer binding. Single canonical authentication-state contract `AuthManager`. Deadlines via the upstream expiry verifier frame at `EXPIRY_VERIFIER = address(0x8141)` (no envelope `expiry` field). Reference contracts in [`assets/eip-8141/`](assets/eip-8141/). Delta map in [`docs/compare.md`](docs/compare.md).
+- **Six alternative scopes** under [`docs/proposals/`](docs/proposals/): four individual features and two aggregated bundles, kept as the comparison surface. The consolidated proposal executes Key streams + Guarantors. The Envelope-expiry, Validity-windows, and Auth-scopes alternatives still appear in the table for historical comparison but are subsumed by the upstream expiry verifier frame; rationale in [`docs/priorities.md`](docs/priorities.md).
 
 Status legend:
 
-- **Current EIP-8141:** external upstream spec. See [eip8141.io Current Spec](https://eip8141.io/current-spec), [Merged Changes](https://eip8141.io/merged-changes), and the [EIP text](https://eips.ethereum.org/EIPS/eip-8141).
+- **Current EIP-8141:** external upstream spec, now including the in-spec **expiry verifier frame** at `EXPIRY_VERIFIER = address(0x8141)`. See [eip8141.io Current Spec](https://eip8141.io/current-spec), [Merged Changes](https://eip8141.io/merged-changes), and the [EIP text](https://eips.ethereum.org/EIPS/eip-8141).
 - **Guarantors:** companion feature in flight as [PR #11555](https://github.com/ethereum/EIPs/pull/11555), folded into the consolidated proposal here.
-- **Flexible nonces, signer binding, envelope expiry:** the three additions on top of guarantors. Validity windows is the two-sided sibling alternative to Envelope expiry; the consolidated draft ships Envelope expiry.
+- **Flexible nonces, signer binding:** the two additions on top of upstream + guarantors. Deadline use-cases are covered by the upstream expiry verifier frame; the Envelope-expiry and Validity-windows alternatives are preserved only as comparison surface.
 
 | Alternative | Doc | Features bundled | Registry shape |
 |---|---|---|---|
 | Flexible nonces | [`docs/proposals/flexible-nonces.md`](docs/proposals/flexible-nonces.md) | Flexible nonces | `NonceManager` |
 | Signer binding | [`docs/proposals/signer-binding.md`](docs/proposals/signer-binding.md) | Signer binding | `PubkeyRegistry` |
-| Validity windows | [`docs/proposals/validity-windows.md`](docs/proposals/validity-windows.md) | `valid_after` + `valid_before` | none |
-| Envelope expiry | [`docs/proposals/envelope-expiry.md`](docs/proposals/envelope-expiry.md) | One-sided `expiry` | none |
+| Validity windows | [`docs/proposals/validity-windows.md`](docs/proposals/validity-windows.md) | `valid_after` + `valid_before` (subsumed by upstream verifier frame; comparison only) | none |
+| Envelope expiry | [`docs/proposals/envelope-expiry.md`](docs/proposals/envelope-expiry.md) | One-sided `expiry` (subsumed by upstream verifier frame; comparison only) | none |
 | Key streams | [`docs/proposals/key-streams.md`](docs/proposals/key-streams.md) | Flexible nonces + signer binding | `AuthManager` (merged) |
-| Auth scopes | [`docs/proposals/auth-scopes.md`](docs/proposals/auth-scopes.md) | Flexible nonces + signer binding + envelope expiry | `AuthManager` (merged) |
+| Auth scopes | [`docs/proposals/auth-scopes.md`](docs/proposals/auth-scopes.md) | Flexible nonces + signer binding + envelope expiry (envelope-expiry component now redundant; comparison only) | `AuthManager` (merged) |
 
-The consolidated [`eip-8141.md`](EIPS/eip-8141.md) is the PR-shaped execution of Auth scopes.
+The consolidated [`eip-8141.md`](EIPS/eip-8141.md) is the PR-shaped execution of Key streams + Guarantors.
 
-Flexible nonces, Key streams, and Auth scopes are complementary to Guarantors: they reduce contention, isolate sponsorship flows, and bound authorization risk, which makes Guarantors more viable in public mempools.
+Flexible nonces and Key streams are complementary to Guarantors: they reduce contention, isolate sponsorship flows, and bound authorization risk, which makes Guarantors more viable in public mempools.
 
 See [`docs/overview.md`](docs/overview.md) for the per-alternative analysis and open uncertainties. See [`docs/priorities.md`](docs/priorities.md) for the load-bearing-weight argument that ranks the alternatives under the one-upgrade constraint.
 
@@ -53,7 +53,7 @@ See [`docs/overview.md`](docs/overview.md) for the per-alternative analysis and 
 
 ```
 EIPS/
-├── eip-8141.md             # Consolidated modified EIP draft (executes Auth scopes)
+├── eip-8141.md             # Consolidated modified EIP draft (executes Key streams + Guarantors)
 └── eip-8141.diff           # Diff against upstream EIPS/eip-8141.md
 
 assets/eip-8141/
@@ -69,13 +69,13 @@ docs/
 ├── glossary.md             # Single canonical definition per term
 ├── summary.md              # PR-body summary for upstream ethereum/EIPs submission
 │
-├── proposals/              # Six alternative scopes; consolidated EIP executes Auth scopes
+├── proposals/              # Six alternative scopes; consolidated EIP executes Key streams + Guarantors
 │   ├── flexible-nonces.md            # Individual: Flexible nonces (NonceManager)
 │   ├── signer-binding.md             # Individual: registry-backed PQ identity (PubkeyRegistry)
-│   ├── validity-windows.md           # Individual: two-sided validity bounds (valid_after + valid_before)
-│   ├── envelope-expiry.md            # Individual: one-sided envelope deadline (expiry)
-│   ├── key-streams.md                # Aggregated: Flexible nonces + signer binding (AuthManager)
-│   └── auth-scopes.md                # Aggregated: all three with envelope expiry (AuthManager) -> eip-8141.md
+│   ├── validity-windows.md           # Individual: two-sided validity bounds (subsumed by upstream verifier frame)
+│   ├── envelope-expiry.md            # Individual: one-sided envelope deadline (subsumed by upstream verifier frame)
+│   ├── key-streams.md                # Aggregated: Flexible nonces + signer binding (AuthManager) -> eip-8141.md
+│   └── auth-scopes.md                # Aggregated: Key streams + envelope expiry (envelope-expiry component now redundant)
 │
 └── appendix/               # Cross-cutting primitives, shared specs, and grounding analyses
     ├── guarantors.md           # Guarantor payer primitive, folded into the consolidated EIP
@@ -108,12 +108,12 @@ Principles every proposal follows. Deviations require explicit justification.
 
 ### Binding and envelope discipline
 
-- Use envelope fields only where consensus must bind pre-frame. Stream keys and `expiry`, yes. Inline PQ pubkeys, no (registry-only).
+- Use envelope fields only where consensus must bind pre-frame. Stream keys, yes. Inline PQ pubkeys, no (registry-only). Deadlines: not in the envelope; the upstream expiry verifier frame already carries them as `frame.data`.
 - Prefer contract storage over account encoding for new state.
 
 ### Alternative selection
 
-- The consolidated [`eip-8141.md`](EIPS/eip-8141.md) executes the Auth-scopes bundle (all three features) under the one-upgrade constraint argued in [`docs/priorities.md`](docs/priorities.md). The five alternatives in [`docs/proposals/`](docs/proposals/) are preserved as the comparison surface.
+- The consolidated [`eip-8141.md`](EIPS/eip-8141.md) executes Key streams + Guarantors under the one-upgrade constraint argued in [`docs/priorities.md`](docs/priorities.md). The five alternatives in [`docs/proposals/`](docs/proposals/) are preserved as the comparison surface.
 
 ---
 

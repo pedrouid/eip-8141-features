@@ -8,32 +8,31 @@ Instructions for AI agents and contributors working on this repository.
 
 This repo proposes an **expansion of [EIP-8141](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-8141.md)** (Frame Transaction), the **native AA upgrade** for Ethereum. AA already exists via ERC-4337 and EIP-7702; EIP-8141 lifts AA to the native protocol layer. The repo carries one consolidated proposal and five alternative scopes preserved for comparison. Each is iterated against core dev and wallet dev review pressure.
 
-**Canonical artifact:** `eip-8141.md` is the consolidated modified EIP draft, executing the Auth-scopes bundle (guarantors + flexible nonces + signer binding + envelope expiry) under a single `AuthManager` system contract. `docs/compare.md` is the delta map vs upstream and related PRs. `docs/summary.md` is the PR-body summary used when submitting upstream to `ethereum/EIPs`; keep it in sync whenever the consolidated bundle changes.
+**Canonical artifact:** `eip-8141.md` is the consolidated modified EIP draft, executing **Key streams + Guarantors** (flexible nonces + signer binding + guarantors) under a single `AuthManager` system contract. Deadlines are NOT in the envelope; upstream merged an in-spec **expiry verifier frame** at `EXPIRY_VERIFIER = address(0x8141)` whose 8-byte `frame.data` is the deadline, covered by `compute_sig_hash`. This proposal uses that mechanism rather than adding a redundant envelope field. `docs/compare.md` is the delta map vs upstream and related PRs. `docs/summary.md` is the PR-body summary used when submitting upstream to `ethereum/EIPs`; keep it in sync whenever the consolidated bundle changes.
 
-**Alternatives** under `docs/proposals/` are kept as the comparison surface and as compromise paths if scope shrinks. `docs/overview.md` enumerates them; `docs/priorities.md` argues the load-bearing-weight ranking, ruling out standalone Flexible nonces, Validity windows, and Envelope expiry, and arguing Envelope expiry over Validity windows on cost-per-envelope-byte grounds.
+**Alternatives** under `docs/proposals/` are kept as the comparison surface and as compromise paths if scope shrinks. `docs/overview.md` enumerates them; `docs/priorities.md` argues the load-bearing-weight ranking, ruling out standalone Flexible nonces. The Envelope-expiry, Validity-windows, and Auth-scopes alternatives are preserved as comparison surface only: their deadline component is subsumed by the upstream verifier frame.
 
 ---
 
 ## Expanded native AA upgrade
 
-EIP-8141 + guarantors + three independent features:
+EIP-8141 (including the in-spec expiry verifier frame at `EXPIRY_VERIFIER = address(0x8141)`) + guarantors + two independent features:
 
 - **Flexible nonces**
 - **Signer binding** (registry-only; inline-envelope path explicitly rejected)
-- **Envelope expiry** (one-sided deadline; preferred over the two-sided Validity windows alternative on cost-per-envelope-byte grounds)
 
-Six alternatives (four individual + two aggregated). Validity windows and Envelope expiry are mutually exclusive standalones; Auth scopes folds in Envelope expiry.
+Deadlines are handled by the upstream expiry verifier frame, not by any envelope field added in this proposal. The Envelope-expiry and Validity-windows alternatives, and the Auth-scopes aggregate that contained envelope expiry, are kept under `docs/proposals/` purely as comparison surface.
 
 | Alternative | Doc | Features | Registry |
 |---|---|---|---|
 | Flexible nonces | `docs/proposals/flexible-nonces.md` | Flexible nonces | `NonceManager` |
 | Signer binding | `docs/proposals/signer-binding.md` | Signer binding | `PubkeyRegistry` |
-| Validity windows | `docs/proposals/validity-windows.md` | `valid_after` + `valid_before` | none |
-| Envelope expiry | `docs/proposals/envelope-expiry.md` | One-sided `expiry` | none |
+| Validity windows | `docs/proposals/validity-windows.md` | `valid_after` + `valid_before` (subsumed by upstream verifier frame; comparison only) | none |
+| Envelope expiry | `docs/proposals/envelope-expiry.md` | One-sided `expiry` (subsumed by upstream verifier frame; comparison only) | none |
 | Key streams | `docs/proposals/key-streams.md` | Flexible nonces + signer binding | `AuthManager` (merged) |
-| Auth scopes | `docs/proposals/auth-scopes.md` | Flexible nonces + signer binding + envelope expiry | `AuthManager` (merged) |
+| Auth scopes | `docs/proposals/auth-scopes.md` | Flexible nonces + signer binding + envelope expiry (envelope-expiry component redundant; comparison only) | `AuthManager` (merged) |
 
-The consolidated `eip-8141.md` ships Auth scopes. `AuthManager` is the canonical authentication-state contract carrying both keyed nonce streams and signer registrations under one address, and is what makes a single-contract identity surface possible across any signature scheme (secp256k1, lattice, multivariate, hash-based).
+The consolidated `eip-8141.md` ships **Key streams + Guarantors**. `AuthManager` is the canonical authentication-state contract carrying both keyed nonce streams and signer registrations under one address, and is what makes a single-contract identity surface possible across any signature scheme (secp256k1, lattice, multivariate, hash-based).
 
 ---
 
@@ -41,7 +40,7 @@ The consolidated `eip-8141.md` ships Auth scopes. `AuthManager` is the canonical
 
 ```
 EIPS/
-├── eip-8141.md             # Consolidated modified EIP draft (executes Auth scopes)
+├── eip-8141.md             # Consolidated modified EIP draft (executes Key streams + Guarantors)
 └── eip-8141.diff           # Diff against upstream EIPS/eip-8141.md
 
 assets/eip-8141/
@@ -57,13 +56,13 @@ docs/
 ├── glossary.md             # Single canonical definition per term
 ├── summary.md              # PR-body summary for upstream ethereum/EIPs submission
 │
-├── proposals/              # Six alternative scopes; consolidated EIP executes Auth scopes
+├── proposals/              # Six alternative scopes; consolidated EIP executes Key streams + Guarantors
 │   ├── flexible-nonces.md
 │   ├── signer-binding.md
-│   ├── validity-windows.md       # Two-sided (valid_after + valid_before)
-│   ├── envelope-expiry.md        # One-sided (expiry); folded into Auth scopes
-│   ├── key-streams.md            # Aggregated (Flexible nonces + signer binding)
-│   └── auth-scopes.md            # Aggregated (all three, with envelope expiry) -> eip-8141.md
+│   ├── validity-windows.md       # Two-sided (subsumed by upstream verifier frame; comparison only)
+│   ├── envelope-expiry.md        # One-sided (subsumed by upstream verifier frame; comparison only)
+│   ├── key-streams.md            # Aggregated (Flexible nonces + signer binding) -> eip-8141.md
+│   └── auth-scopes.md            # Aggregated (Key streams + envelope expiry); envelope-expiry component redundant
 │
 └── appendix/               # Cross-cutting primitives, shared specs, and grounding analyses
     ├── guarantors.md           # Folded into the consolidated EIP
@@ -100,7 +99,7 @@ Principles every proposal follows. **Deviating requires explicit justification i
 
 ### Binding and envelope discipline
 
-8. **Use envelope fields only where consensus must bind pre-frame.** Stream keys and `expiry`, yes. Inline PQ pubkeys, no (registry-only).
+8. **Use envelope fields only where consensus must bind pre-frame.** Stream keys, yes. Inline PQ pubkeys, no (registry-only). Deadlines, no: the upstream expiry verifier frame at `EXPIRY_VERIFIER = address(0x8141)` already carries them as `frame.data` and is covered by `compute_sig_hash`; adding an envelope `expiry` field on top would be redundant and would impose its byte cost on every tx that does not use a deadline.
 9. **Prefer contract storage over account encoding for new state.** System contracts inherit existing machinery (snap sync, witnesses, state-tree transitions); new account fields do not.
 
 ### Scope and isolation
