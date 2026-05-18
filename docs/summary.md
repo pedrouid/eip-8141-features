@@ -1,35 +1,23 @@
-# Expand EIP-8141 with Guarantors, Flexible Nonces, and Signer Binding
+# Extend EIP-8141 with Guarantors, Keyed Nonces, and Signer Binding
 
-This PR replaces the previous consolidated proposal (PR #11643). The earlier draft bundled four additions on top of EIP-8141: guarantors, flexible nonces, signer binding, and an envelope `expiry` field. Upstream has since merged an in-spec **expiry verifier frame** at `EXPIRY_VERIFIER = address(0x8141)`, an 8-byte `frame.data` deadline covered by `compute_sig_hash` and dropped deterministically from the public mempool when expired. That mechanism subsumes every load-bearing property of the previous envelope-expiry design without spending an envelope byte on every tx that does not use a deadline. The envelope `expiry` field is therefore removed from this PR; deadline use-cases route through the upstream verifier frame.
+Three additions over upstream EIP-8141, scoped to the minimum spec delta and aligned with active related PRs.
 
-The remaining three features are unchanged in intent from the previous PR.
+**Features**
 
-**Features included:**
+- **Guarantors**: a payer primitive that admits a transaction to the public mempool even when the sender's `VERIFY` frame is unsafe to simulate. Adopts [PR #11555](https://github.com/ethereum/EIPs/pull/11555) verbatim: `APPROVE_GUARANTEE = 0x4` scope, `compute_frame_sig_hash`, `guarantor_approved`, canonical paymaster guarantor mode with `bumpNonce`.
+- **Keyed Nonces**: independent replay-protection sequences per `(sender, signer)`. Mirrors [EIP-8250](https://github.com/ethereum/EIPs/pull/11598) semantics (consumption inside the unique successful payment-scoped `APPROVE`, journaled outside revert and atomic-batch rollback, `KEYED_NONCE_FIRST_USE_GAS = 20000`). Diverges only in shape: one `uint64 signer` envelope field instead of `(nonce_key, nonce_seq)`, so the same identifier indexes the keyed nonce and the registered pubkey.
+- **Signer Binding**: tx-scoped `verified_signers` table populated by non-secp256k1 `VERIFY` frames that prove `(digest, address)` against a registered pubkey. `ECRECOVER` consults the table on the hit path; miss path is byte-identical to upstream.
 
-- **Guarantors**: payer primitive making txs public-mempool admissible even when sender validation may fail; enables ERC-20 paymaster repayment safely.
-- **Flexible Nonces**: keyed nonce streams per sender; concurrent submission for privacy-pool withdrawals, recurring actions, and intents.
-- **Signer Binding**: registry-only `(sender, signer) → (pubkey, type)`; spans secp256k1, lattice, multivariate, hash-based; inline pubkeys rejected.
+**Protocol additions**
 
-**Protocol additions:**
+- One envelope field: `signer` (uint64).
+- One system contract: `AUTH_MANAGER` at a reserved address (EIP-4788 / EIP-2935 pattern). Holds keyed nonces and registered signers under one address.
+- Zero new opcodes, zero new precompiles, zero account-RLP changes.
 
-- **One envelope field:** `signer` (uint64 registered-signer id).
-- **One system contract:** `AuthManager` at a reserved address, following the EIP-4788 / EIP-2935 system-contract pattern, holding both keyed nonce streams and registered pubkey signers under one address.
-- **Zero new opcodes.**
-- **Zero new precompiles.**
-- **Zero account RLP changes.**
+**Related PRs and alignment**
 
-**Relationship to prior PR (#11643)**
+- [Guarantors (#11555)](https://github.com/ethereum/EIPs/pull/11555) by Derek Chiang — adopted verbatim where it touches our spec surface.
+- [Keyed Nonces (EIP-8250, #11598)](https://github.com/ethereum/EIPs/pull/11598) by Thomas Thiery et al. — same consumption-on-payment-approval semantics, single-field envelope shape.
+- [EIP-8164 Key Delegation](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-8164.md) — independent; not modified here.
 
-- Same three remaining features, same `AuthManager` shape, same reference contracts.
-- Envelope shrinks from two added fields (`signer`, `expiry`) to one (`signer`); pre-frame consensus drops the expiry check.
-- `TXPARAM(0x0E)` (expiry) is removed; `TXPARAM(0x0C)` (signer) and `TXPARAM(0x0D)` (pre-state legacy nonce) remain.
-- Mempool RBF rules drop expired-eviction; `(sender, signer, nonce)` replacement is unchanged.
-- Rationale "Deadlines via expiry verifier frame, not envelope" in the EIP body explains the drop and why a single deadline path through the spec is preferable.
-
-**Related Proposals**
-
-1. Guarantors: [PR #11555](https://github.com/ethereum/EIPs/pull/11555)
-2. Keyed Nonces: [PR #11598](https://github.com/ethereum/EIPs/pull/11598)
-3. Key Delegation: [EIP-8164](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-8164.md)
-
-Authors of those proposals are credited in the `author` header.
+Authors of those proposals are credited in the EIP `author` header.
