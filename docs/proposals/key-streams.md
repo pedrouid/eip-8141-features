@@ -1,16 +1,18 @@
 # Key Streams for EIP-8141
 
 ```
-Status:             research draft
+Status:             CONSOLIDATED EIP executes this shape (+ guarantors)
 Depends on:         EIP-8141 + guarantors
 Introduces:         signer envelope field, AuthManager (merged), verified-signers table, modified ECRECOVER
 Shared appendices:  system-contracts, verified-signers, mempool-tiers,
                     sighash-binding, guarantors, pq-analysis
 ```
 
+> **Note.** The consolidated [`/eip-8141.md`](../../EIPS/eip-8141.md) is the PR-shaped execution of this proposal plus guarantors. Deadlines are covered by the upstream **expiry verifier frame** at `EXPIRY_VERIFIER = address(0x8141)`, which ships as part of the upstream baseline; no envelope deadline field is added. [`docs/compare.md`](../compare.md) is the delta map against upstream.
+
 ## 1. Status and scope
 
-Aggregated alternative. Lands Flexible nonces and signer binding in one upgrade. This doc is the merged spec; sections labelled **Inherited from §X** restate component content for completeness, sections labelled **New** cover the cross-feature analysis. Constraints respected (no new opcodes, precompiles, frame modes, account-encoding changes, sighash changes) are listed in [`docs/overview.md`](../overview.md). Identified as the middle ground in [`docs/priorities.md`](../priorities.md).
+Aggregated alternative. Lands Flexible nonces and signer binding in one upgrade. This doc is the merged spec; sections labelled **Inherited from §X** restate component content for completeness, sections labelled **New** cover the cross-feature analysis. Constraints respected (no new opcodes, precompiles, frame modes, account-encoding changes, sighash changes) are listed in [`docs/overview.md`](../overview.md). Identified as the load-bearing bundle in [`docs/priorities.md`](../priorities.md); the consolidated EIP draft [`/eip-8141.md`](../../EIPS/eip-8141.md) executes this shape.
 
 ## 2. Motivation
 

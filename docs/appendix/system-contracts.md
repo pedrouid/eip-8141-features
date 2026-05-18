@@ -13,14 +13,14 @@ Which contract a proposal deploys depends on which features it ships:
 
 | Proposal | Contract deployed | Address constant |
 |---|---|---|
-| Validity windows (standalone) | none | n/a |
-| Envelope expiry (standalone) | none | n/a |
+| Validity windows (standalone, **comparison only**) | none | n/a |
+| Envelope expiry (standalone, **comparison only**) | none | n/a |
 | Flexible nonces (standalone) | `NonceManager` | `NONCE_MANAGER` |
 | Signer binding (standalone) | `PubkeyRegistry` | `PUBKEY_REGISTRY` |
-| Key streams (Flexible nonces + signer binding) | `AuthManager` (merged) | `AUTH_MANAGER` |
-| Auth scopes (Flexible nonces + signer binding + envelope expiry) | `AuthManager` (merged) | `AUTH_MANAGER` |
+| Key streams (Flexible nonces + signer binding) -> **consolidated EIP** | `AuthManager` (merged) | `AUTH_MANAGER` |
+| Auth scopes (Flexible nonces + signer binding + envelope expiry, **envelope-expiry component redundant**) | `AuthManager` (merged) | `AUTH_MANAGER` |
 
-The standalone contracts and the merged `AuthManager` are not all deployed at once. An upgrade ships exactly one shape. `AuthManager` is the merge of `NonceManager` + `PubkeyRegistry` and obsoletes both whenever Flexible nonces and Signer binding ship together. Validity windows and Envelope expiry add no contract regardless of which other features ship.
+The standalone contracts and the merged `AuthManager` are not all deployed at once. An upgrade ships exactly one shape. `AuthManager` is the merge of `NonceManager` + `PubkeyRegistry` and obsoletes both whenever Flexible nonces and Signer binding ship together. Validity windows and Envelope expiry add no contract regardless of which other features ship. The upstream **expiry verifier frame** at `EXPIRY_VERIFIER = address(0x8141)` (already merged into the EIP-8141 baseline) is the canonical contract for deadlines and ships independently of which alternative is chosen.
 
 ## 1. NonceManager (standalone Flexible nonces)
 

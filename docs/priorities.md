@@ -21,7 +21,7 @@ Everything else is incremental once that holds.
 
 Native AA changes the consensus surface. It ships through the all-cores upgrade pipeline, with cross-client review, audit, and activation cycles measured in years. EIP-8141 is the upgrade that lifts AA into the protocol. The expansion this repo proposes lands inside that upgrade or not at all.
 
-There is no realistic second opportunity to add a `NonceManager` later, no follow-on to slot an `expiry` field into a tx envelope that already shipped, no third pass to retrofit the recovery path. Whatever bundles into this upgrade is what the protocol carries forward.
+There is no realistic second opportunity to add a `NonceManager` later, no third pass to retrofit the recovery path. Whatever bundles into this upgrade is what the protocol carries forward. (Deadlines are an exception: upstream already merged the expiry verifier frame at `EXPIRY_VERIFIER = address(0x8141)`, so that capability ships with the baseline regardless of which alternative is chosen.)
 
 The decision is therefore not which alternative is best in isolation. It is: how many features can be defended in one cross-client review cycle, knowing the upgrade is one-shot.
 
@@ -76,22 +76,21 @@ The pre-tx rule is a single registry consult: check the per-signer sequence, adv
 
 If the upgrade ships signer binding with the nonce side on day one, Flexible nonces are deliverable. Otherwise they are not deliverable in this upgrade and not deliverable after it.
 
-## Folding in envelope expiry
+## Deadlines: subsumed by the upstream expiry verifier frame
 
-The time-bound feature closes the stale-signature gap. Two mutually-exclusive shapes: **Validity windows** ([`proposals/validity-windows.md`](proposals/validity-windows.md)) with both bounds; **Envelope expiry** ([`proposals/envelope-expiry.md`](proposals/envelope-expiry.md)) with only the upper bound. Not load-bearing for the central claim, but the one-upgrade constraint applies: whichever lands, lands now.
+The time-bound feature closes the stale-signature gap. Earlier revisions argued for an envelope `expiry` field over the two-sided **Validity windows** ([`proposals/validity-windows.md`](proposals/validity-windows.md)) shape on cost-per-envelope-byte grounds (`valid_before` is the dominant deadline use-case across intents, swaps, liquidations, atomic swaps; `valid_after` scheduled activation is solvable offchain).
 
-The choice is Envelope expiry. Every envelope field is paid by every tx, not just txs using it. `valid_before` (deadlines) is the dominant use-case across intents, swaps, liquidations, atomic swaps, async actions; `valid_after` (scheduled activation) is solvable offchain by deferring submission and ships a heavier surface (future-valid state, reverse-window rejection, four error codes vs. two, per-sender caps, gossip threshold). Keep the field that earns its envelope cost; drop the one that does not. Detail in [`proposals/envelope-expiry.md`](proposals/envelope-expiry.md) §3.
+Upstream subsequently merged a built-in **expiry verifier frame** at `EXPIRY_VERIFIER = address(0x8141)`: an in-spec `VERIFY` frame whose 8-byte `frame.data` is the deadline, covered by `compute_sig_hash`, dropped from the public mempool deterministically when expired, with `TIMESTAMP` permitted only inside that frame's canonical runtime. This subsumes every load-bearing property of the prior envelope-expiry design (consensus-enforced deadline, sig-hash coverage, deterministic ready/expired classification, no future-valid state, no simulation cost outside that one frame) without spending an envelope byte on every tx that does not use a deadline.
 
-Auth scopes folds in Envelope expiry; Validity windows is preserved as comparison surface.
+The consolidated EIP therefore drops the envelope `expiry` field, its pre-frame check, `TXPARAM(0x0E)`, and the two expired-eviction JSON-RPC error codes. The standalone [`proposals/envelope-expiry.md`](proposals/envelope-expiry.md) and the two-sided [`proposals/validity-windows.md`](proposals/validity-windows.md) alternatives, along with the aggregated `Auth scopes` shape that contained envelope expiry, remain under `docs/proposals/` as comparison surface but are not part of the consolidated bundle.
 
-## Three viable bundles
+## Two viable bundles
 
-Under the one-upgrade constraint, the six alternatives in [`overview.md`](overview.md) collapse to three viable bundles:
+Under the one-upgrade constraint, the alternatives in [`overview.md`](overview.md) collapse to two viable bundles (deadlines are not part of the choice, they ship with the upstream baseline):
 
-- **Signer binding**, the minimum requirement. `PubkeyRegistry`, verified-signers table, `ECRECOVER` hit-path-first lookup. No Flexible nonces, no envelope expiry.
-- **Key streams**, the middle ground. Signer binding plus per-signer nonce stream, the `signer` envelope field (uint64), and per-signer mempool rules. One registry, two features.
-- **Auth scopes**, the maximum. Key streams + envelope expiry. The most user-visible bundle in one upgrade.
+- **Signer binding**, the minimum requirement. `PubkeyRegistry`, verified-signers table, `ECRECOVER` hit-path-first lookup. No Flexible nonces.
+- **Key streams**, the maximum that fits one upgrade cycle. Signer binding plus per-signer nonce stream, the `signer` envelope field (uint64), and per-signer mempool rules. One registry (`AuthManager`), two features.
 
-Standalone **Flexible nonces**, **Validity windows**, and **Envelope expiry** are not viable under this constraint. They ship a tx model that cannot accommodate PQ accounts on day one, with no second upgrade in which to add signer binding afterwards. This doc rules them out.
+Standalone **Flexible nonces** is not viable: it ships a tx model that cannot accommodate PQ accounts on day one, with no second upgrade in which to add signer binding afterwards.
 
-The hierarchy: **Auth scopes is best, Key streams is the middle ground, Signer binding is the minimum.** The decision between them is review burden in one cycle, not feature pickability across cycles. Signer binding answers "what must be in this upgrade for EIP-8141 to deliver on its own premise"; Key streams and Auth scopes answer "how much more can the same upgrade carry without losing review."
+The hierarchy: **Key streams is best, Signer binding is the minimum.** The decision between them is review burden in one cycle, not feature pickability across cycles. Signer binding answers "what must be in this upgrade for EIP-8141 to deliver on its own premise"; Key streams answers "how much more can the same upgrade carry without losing review." The consolidated [`/eip-8141.md`](../EIPS/eip-8141.md) executes Key streams + Guarantors.
