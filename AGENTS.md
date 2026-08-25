@@ -14,6 +14,7 @@ Canonical bundle:
 Research surfaces:
 
 - use EIP-8250 as design provenance, not as the owner of keyed nonce semantics;
+- use EIP-8164 as design provenance for alternative-key authentication and transaction-scoped signer binding;
 - benchmark the coupled L1 expiry-window and replay-buffer-capacity activation values;
 - use the upstream expiry verifier instead of envelope deadlines.
 

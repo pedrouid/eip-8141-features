@@ -6,7 +6,7 @@ The goals still hold.
 
 Guarantors remain the cleanest way to relay accounts whose validation cannot be safely simulated by every public node. The rebase keeps the payer commitment and fallback replay nonce, but uses the canonical signature list instead of embedding a signature in frame data. Because empty-`msg` signature bytes are elided, sender and guarantor independently sign the same complete transaction.
 
-Signer binding remains necessary for Ethereum's immutable contract base. New account code can understand P256 or post-quantum signatures, but deployed permit contracts still ask `ECRECOVER` for an address. A binding frame now lets account code validate an application digest with `SIGPARAM` or `SIGDATACOPY`, return the digest, and populate a transaction-scoped compatibility table. No persistent pubkey registry is needed.
+[EIP-8164](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-8164.md) demonstrates the need for native alternative-key and post-quantum authentication, but Ethereum's immutable contract base still expects secp256k1-shaped `ECRECOVER` results. Signer binding carries that interoperability goal into EIP-8141: a binding frame lets account code validate an application digest with `SIGPARAM` or `SIGDATACOPY`, return the digest, and populate a transaction-scoped compatibility table. Unlike EIP-8164's persistent native-key designator, this mechanism persists neither the key nor the binding.
 
 Parallel nonces now live directly in EIP-8141. The integrated ordered sets of full-width nonce keys preserve privacy-nullifier and multi-domain outcomes that the old single-signer stream discarded. EIP-8250 remains the design source, not a required companion activation.
 

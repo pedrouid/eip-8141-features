@@ -2,7 +2,7 @@
 
 ## Rebased architecture
 
-The consolidated EIP-8141 owns the transaction signature list, protocol signature validation, signature introspection, native sequenced and nonceless nonce modes, two-dimensional gas, static batch constraints, and the expiry verifier. EIP-8250 and EIP-8130 supply design provenance, not separate ownership boundaries.
+The consolidated EIP-8141 owns the transaction signature list, protocol signature validation, signature introspection, native sequenced and nonceless nonce modes, two-dimensional gas, static batch constraints, and the expiry verifier. EIP-8250 and EIP-8130 supply replay-design provenance, while [EIP-8164](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-8164.md) motivates alternative-key interoperability with existing contracts. None is a separate ownership boundary for these EIP-8141 mechanisms.
 
 | Proposal | Outcome | Status |
 |---|---|---|

@@ -6,6 +6,8 @@ _Individual alternative and part of the consolidated draft._
 
 EIP-8141's signature list lets new account code consume secp256k1, P256, or `ARBITRARY` witnesses. Existing immutable contracts still call `ECRECOVER(digest, v, r, s)` and compare the result with an owner address. Without a compatibility path, non-secp256k1 accounts cannot use those contracts' permit and meta-transaction surfaces.
 
+The design is inspired by [EIP-8164](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-8164.md), which makes alternative and post-quantum keys capable of authenticating an account natively. Signer binding preserves that authenticated account's interoperability with existing `ECRECOVER` callers without adopting EIP-8164's persistent key designator: authorization remains account-defined, and each digest binding exists only for the current frame transaction.
+
 ## Single-line delta
 
 A standalone `VERIFY` frame marked `SIGNER_BINDING_FLAG` returns application digests authorized by its target account. The protocol stores `digest -> target` for the transaction. `ECRECOVER` checks this table before its unchanged secp256k1 path.

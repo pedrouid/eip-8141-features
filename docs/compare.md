@@ -133,5 +133,6 @@ Do not import EIP-8130’s Keystore, actor registry, scope vocabulary, account l
 
 - [Current EIP-8141](https://github.com/ethereum/EIPs/blob/15bc93fd63181f6d1af31e9a93f33f922d13286b/EIPS/eip-8141.md)
 - [EIP-8130](https://github.com/ethereum/EIPs/blob/15bc93fd63181f6d1af31e9a93f33f922d13286b/EIPS/eip-8130.md)
+- [EIP-8164](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-8164.md), alternative-key authentication and signer-binding motivation
 - [`EIPS/eip-8141.md`](../EIPS/eip-8141.md), upgraded Draft
 - [`EIPS/eip-8141.diff`](../EIPS/eip-8141.diff), exact upstream delta

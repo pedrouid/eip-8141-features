@@ -38,7 +38,7 @@ If sender validation approves execution, a structurally authenticated settlement
 
 `SIGNER_BINDING_FLAG = 0x10` identifies a standalone `VERIFY` frame that returns application digests authorized by its target account. The protocol records up to eight `digest -> account` bindings for the transaction.
 
-`ECRECOVER` checks this table first and otherwise follows its existing secp256k1 behavior unchanged. This lets P256, post-quantum, passkey, or account-defined validation interoperate with existing permit and order contracts without persistent public-key storage.
+`ECRECOVER` checks this table first and otherwise follows its existing secp256k1 behavior unchanged. Inspired by EIP-8164's native alternative-key authentication, this lets P256, post-quantum, passkey, or account-defined validation interoperate with existing permit and order contracts. Unlike EIP-8164's native-key designator, the binding and key material are not persisted by this mechanism.
 
 ## Rebase decisions
 
@@ -46,7 +46,7 @@ If sender validation approves execution, a structurally authenticated settlement
 - Empty-`msg` sender, payer, and guarantor signatures independently sign the same canonical transaction hash; no second frame hash is added.
 - Uses `limits = [execution, state]` and prices durable replay state through EIP-8037 state gas.
 - Keeps the existing expiry-verifier frame instead of adding envelope deadline fields.
-- Makes EIP-8141 the normative owner of keyed and nonceless replay semantics. EIP-8250 and EIP-8130 are design provenance only.
+- Makes EIP-8141 the normative owner of keyed and nonceless replay semantics. EIP-8250 and EIP-8130 are replay-design provenance, and EIP-8164 is signer-binding motivation.
 - Adds no new opcode number, precompile, account-RLP field, or mandatory pubkey registry.
 
 ## Protocol and implementation impact
@@ -69,3 +69,4 @@ The proposal also needs executable state-transition vectors, independent client 
 - [Guarantors PR #11555](https://github.com/ethereum/EIPs/pull/11555)
 - [EIP-8250](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-8250.md), keyed-nonce design provenance
 - [EIP-8130](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-8130.md), nonceless replay design provenance
+- [EIP-8164](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-8164.md), alternative-key authentication and signer-binding motivation

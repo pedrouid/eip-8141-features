@@ -176,11 +176,10 @@
      if len(sig.signer) == 0:
          resolved_signer = tx_sender
      elif len(sig.signer) == 20:
-@@ -318,7 +360,135 @@
- ```
+@@ -319,6 +361,134 @@
  
  Note: since the signature validation does not happen in EVM execution, the related precompiles `ecrecover` and `P256VERIFY` must not be added to the block-level access list.
-+
+ 
 +#### Native Nonce Modes
 +
 +Frame transactions carry one or more replay-domain keys with a shared sequence. The singleton key set `[0]` selects the sender's legacy account nonce. Non-zero keys below `NONCE_KEY_MAX` select protocol-managed keyed state under `NONCE_MANAGER`. The singleton `[NONCE_KEY_MAX]` selects nonceless mode and never addresses a `NONCE_MANAGER` slot.
@@ -306,7 +305,7 @@
 +```
 +
 +The storage writes use EIP-8037's normal state-growth accounting and the current approving frame's state-gas pool. At most four previously-zero storage slots become non-zero, so `NONCELESS_MAX_STATE_GAS` is `4 * STATE_BYTES_PER_STORAGE_SET * CPSB = 391680`. Clearing an entry that was non-zero at transaction start does not create a spendable refill. Replay insertion, its state-gas attribution, payer collection, and the approval effect are one atomic approval transition.
- 
++
 +The circular buffer is deterministic consensus state and therefore rolls back with ordinary state on a reorg. `REPLAY_BUFFER_CAPACITY` MUST be at least the maximum number of nonceless transactions consensus can accept during `NONCELESS_EXPIRY_WINDOW`; otherwise the safe full-buffer rejection above becomes an avoidable availability limit. The concrete L1 expiry and capacity activation parameters require worst-case throughput benchmarking before this Draft can advance.
 +
  #### Expiry Verifier Frame
@@ -551,7 +550,7 @@
  | 0x02    | `sender`                                                                    |
  | 0x03    | `fees.max_priority_fee_per_gas`                                             |
  | 0x04    | `fees.max_fee_per_gas`                                                      |
-@@ -752,7 +989,22 @@
+@@ -752,8 +989,23 @@
  | 0x0A    | currently executing frame index                                             |
  | 0x0B    | `len(signatures)`                                                           |
  | 0x0C    | `state_gas_left` remaining in the currently executing frame                |
@@ -562,7 +561,7 @@
 +| 0x11    | `nonceless_replay_id` in nonceless mode, otherwise `0`                      |
  
 +`nonce_keys_hash(tx)` is:
-+
+ 
 +```text
 +keccak256(
 +    uint256_to_bytes32(len(tx.nonce_keys)) ||
@@ -571,9 +570,10 @@
 +```
 +
 +The count and hash let validation code authenticate the entire selected set without one opcode per key. `TXPARAM(0x10)` exposes the first key directly for the common singleton-key case. `TXPARAM(0x11)` lets accounts and paymasters authenticate the consensus replay identity without reconstructing its RLP preimage.
- 
++
  Undefined `param` values result in an exceptional halt.
  
+ #### `FRAMEDATALOAD` Instruction `0xb1`
 @@ -806,15 +1058,17 @@
  | 0x04    | frameIndex   | `len(data)`                                               |
  | 0x05    | frameIndex   | `status` (exceptional halt if current/future)             |
@@ -779,12 +779,13 @@
  
  #### Transaction origination
  
-@@ -1146,12 +1431,36 @@
+@@ -1145,13 +1430,39 @@
+ 1. A signature over `compute_sig_hash(tx)` cannot commit to its own raw bytes.
  1. Signatures with explicit 32-byte `msg` values do not induce this circularity, so their raw bytes are currently committed by the transaction signature hash.
  1. In the future it may be desired to aggregate or otherwise externalize these signatures for data and compute efficiency reasons.
- 
-+### Native nonce modes
 +
++### Native nonce modes
+ 
 +Parallel replay domains belong in the frame transaction because replay protection and payment approval are one atomic protocol transition. A contract-managed nullifier table cannot provide the same guarantee: `VERIFY` is static-call-like, while a later ordinary frame can revert after payment approval has already committed.
 +
 +The ordered set design preserves a scalar sequence while allowing one transaction to atomically consume several domains. Full-width keys support privacy nullifiers and capability hashes without truncation. `[0]` retains legacy account-nonce behavior, so ordinary EOAs and existing account assumptions still have a simple path.
@@ -811,12 +812,14 @@
 +
 +The signature list and `SIGPARAM` make signature schemes visible to new account code, but immutable contracts that call `ECRECOVER` still recognize only secp256k1. Signer binding bridges that compatibility gap. An account validates an application digest under its own authorization policy, returns the digest from a signer-binding frame, and becomes the transaction-scoped `ECRECOVER` result for that digest.
 +
-+The account code remains the source of authorization. No protocol pubkey registry is required. This keeps key rotation, large post-quantum public keys, and scheme-specific verification out of persistent protocol state. The table is capped, write-once per digest, and discarded after the transaction.
++This mechanism is inspired by [EIP-8164](./eip-8164.md)'s native alternative-key authentication and its explicit authenticated-account model. EIP-8141 applies that interoperability goal at application-call time rather than installing a persistent native-key designator: account code remains the source of authorization, and only the verified `digest -> account` result is exposed for the current transaction.
++
++No protocol pubkey registry is required. This keeps key rotation, large post-quantum public keys, and scheme-specific verification out of persistent protocol state. The table is capped, write-once per digest, and discarded after the transaction.
 +
  ### Payer in receipt
  
  The payer cannot be determined statically from a frame transaction and is relevant to users. The only way to provide this information safely and efficiently over the JSON-RPC is to record this data in the receipt object.
-@@ -1172,7 +1481,7 @@
+@@ -1172,7 +1483,7 @@
  
  Using a flag to indicate atomic batches saves us from having to introduce a new mode. Batches are identified purely by consecutive frames with the flag set, terminated by a frame without it. This design enables consecutive atomic batches since the batch boundary is clearly indicated by the frame without the flag.
  
@@ -825,7 +828,7 @@
  
  ### Per-frame cost
  
-@@ -1214,7 +1523,7 @@
+@@ -1214,7 +1525,7 @@
  
  Value-bearing frames are charged `TX_VALUE_COST` for the recipient balance write and transfer log, as EIP-2780 charges top-level transfers. The charge is static because `value` and `target` are transaction fields. Frame targets do not pay EIP-2780's unconditional cold-rate recipient touch. Frames behave like internal calls, which stay on the [EIP-2929](./eip-2929.md) warm/cold model, and a transaction repeatedly targeting the same account would otherwise overpay.
  
@@ -834,7 +837,7 @@
  
  ### Transaction execution gas cap
  
-@@ -1311,6 +1620,28 @@
+@@ -1311,6 +1622,28 @@
  
  Note: to be included in the public mempool under the current model, sponsors must accept some risk of frontrunning by the sponsee who can zero out their ERC-20 balance before the sponsored transaction lands on-chain.
  
@@ -863,7 +866,7 @@
  ### Data Efficiency
  
  **Basic transaction sending ETH from a smart account:**
-@@ -1319,7 +1650,8 @@
+@@ -1319,7 +1652,8 @@
  | --------------------------------- | ----- |
  | Tx wrapper                        | 1     |
  | Chain ID                          | 1     |
@@ -873,7 +876,7 @@
  | Sender                            | 20    |
  | Max priority fee                  | 5     |
  | Max fee                           | 5     |
-@@ -1345,9 +1677,9 @@
+@@ -1345,9 +1679,9 @@
  | Execution frame: state gas        | 3     |
  | Execution frame: value            | 5     |
  | Execution frame: data             | 0     |
@@ -885,7 +888,7 @@
  
  This is not much larger than an EIP-1559 transaction; the extra overhead is mainly the need to specify the sender and the per-frame wrapper explicitly.
  
-@@ -1408,6 +1740,10 @@
+@@ -1408,6 +1742,10 @@
  
  Wallets and gas estimators must produce two-dimensional, per-frame gas estimates: each frame's `limits.execution` covers its execution gas and its `limits.state` covers its state gas, and neither budget can borrow from the other or from other frames. Under-provisioned state gas halts a frame exactly like out-of-gas; over-provisioned budgets are refunded at settlement but raise the up-front `max_cost` collected from the payer. When the calldata floor binds, `gas_used` is `calldata_floor_gas + tx_state_gas`, so fee estimation for data-heavy transactions must add the state dimension on top of the floor rather than assuming EIP-7623's transaction-total floor.
  
@@ -896,7 +899,7 @@
  ## Security Considerations
  
  ### Transaction Propagation
-@@ -1434,12 +1770,32 @@
+@@ -1434,12 +1772,32 @@
  
  #### Explicit Sender State-Read Amplification
  

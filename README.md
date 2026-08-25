@@ -8,7 +8,7 @@ The project preserves four outcomes:
 
 1. **Arbitrary validation through the public mempool.** Guarantors pay even when sender validation fails. The mechanism is rebased from the closed, stale [guarantors PR #11555](https://github.com/ethereum/EIPs/pull/11555) onto the current signature-list and two-dimensional-gas design.
 2. **Parallel replay domains.** EIP-8141 directly carries ordered nonce-key sets and protocol-managed sequences, using the stronger design developed in [EIP-8250](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-8250.md) instead of the old single `signer` envelope fork.
-3. **Compatibility for non-secp256k1 accounts.** Signer-binding `VERIFY` frames let account code bind application digests to an address for transaction-scoped `ECRECOVER` compatibility. They use EIP-8141's `signatures`, `SIGPARAM`, and `SIGDATACOPY`; no pubkey registry is required.
+3. **Compatibility for non-secp256k1 accounts.** Inspired by [EIP-8164](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-8164.md)'s native alternative-key authentication, signer-binding `VERIFY` frames let account code bind application digests to an address for transaction-scoped `ECRECOVER` compatibility. They use EIP-8141's `signatures`, `SIGPARAM`, and `SIGDATACOPY`; no pubkey registry is required.
 4. **Counter-free replay protection.** EIP-8130's nonceless pattern is integrated into EIP-8141 as `[NONCE_KEY_MAX]`: short mandatory expiry, a fee- and signature-invariant replay identifier, and bounded consensus replay state. The two coupled L1 activation values remain to be benchmarked.
 
 ## Canonical artifacts
