@@ -9,14 +9,9 @@ This PR extends the current EIP-8141 frame transaction with four related capabil
 
 ## Motivation
 
-EIP-8141 currently has four gaps:
+EIP-8141 currently forces transactions through one sender nonce, requires counter coordination for short-lived actions, cannot safely relay arbitrary validation through the public mempool, and leaves non-secp256k1 accounts incompatible with contracts that call `ECRECOVER`.
 
-- Every transaction uses the sender's single nonce, so unrelated actions cannot progress independently.
-- Short-lived transactions still require wallets and relayers to coordinate a counter.
-- The public mempool cannot safely relay accounts whose validation falls outside its restricted simulation rules unless another party accepts the cost of failed validation.
-- Existing permit, order, and meta-transaction contracts often call `ECRECOVER` directly, preventing accounts that use P256, passkeys, post-quantum signatures, or other authentication schemes from using them.
-
-Keyed replay domains separate unrelated transaction flows. Nonceless mode removes counter coordination for short-lived transactions. Guarantors make arbitrary sender validation relayable by paying even when validation fails. Signer binding lets account-defined authentication work with existing `ECRECOVER` contracts. Account authorization remains in account code.
+This proposal addresses those gaps with keyed and nonceless replay, guarantors, and signer binding while keeping authorization in account code.
 
 ## Specification changes
 
