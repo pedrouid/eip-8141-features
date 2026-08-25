@@ -40,30 +40,6 @@ If sender validation approves execution, a structurally authenticated settlement
 
 `ECRECOVER` checks this table first and otherwise follows its existing secp256k1 behavior unchanged. Inspired by EIP-8164's native alternative-key authentication, this lets P256, post-quantum, passkey, or account-defined validation interoperate with existing permit and order contracts. Unlike EIP-8164's native-key designator, the binding and key material are not persisted by this mechanism.
 
-## Rebase decisions
-
-- Uses the existing signature list, `SIGPARAM`, and `SIGDATACOPY`.
-- Empty-`msg` sender, payer, and guarantor signatures independently sign the same canonical transaction hash; no second frame hash is added.
-- Uses `limits = [execution, state]` and prices durable replay state through EIP-8037 state gas.
-- Keeps the existing expiry-verifier frame instead of adding envelope deadline fields.
-- Makes EIP-8141 the normative owner of keyed and nonceless replay semantics. EIP-8250 and EIP-8130 are replay-design provenance, and EIP-8164 is signer-binding motivation.
-- Adds no new opcode number, precompile, account-RLP field, or mandatory pubkey registry.
-
-## Protocol and implementation impact
-
-- Approval scope expands to three bits; `ATOMIC_BATCH_FLAG` moves to `0x08` and signer binding uses `0x10`.
-- `FRAMEPARAM(0x0C)` exposes the actual approved scope of a completed frame.
-- Two system-state accounts hold keyed nonce and nonceless replay state.
-- Receipts use status `2` for frames skipped after failed guaranteed validation.
-- Public-mempool rules add a canonical guarantee prefix plus keyed/nonceless replacement identities and state dependencies.
-- The canonical paymaster accepts protocol-validated secp256k1 or P256 signature entries and authenticates its settlement frame.
-
-## Draft activation gates
-
-`NONCELESS_EXPIRY_WINDOW` and `REPLAY_BUFFER_CAPACITY` intentionally remain unspecified L1 activation parameters. They must be fixed together from worst-case throughput, saturation, reorg, pruning, and database benchmarks before the EIP advances beyond Draft.
-
-The proposal also needs executable state-transition vectors, independent client prototypes, canonical-paymaster differential tests, and formal replay/guarantor invariants.
-
 ## Related work
 
 - [Guarantors PR #11555](https://github.com/ethereum/EIPs/pull/11555)
