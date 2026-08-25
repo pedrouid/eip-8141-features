@@ -7,13 +7,16 @@ This PR extends the current EIP-8141 frame transaction with four related capabil
 - guarantor-backed sender validation;
 - transaction-scoped signer binding for existing `ECRECOVER` callers.
 
-The proposal is rebased on the current signature-list, two-dimensional-gas, receipt, expiry-verifier, atomic-batch, blob, and public-mempool design. It does not restore the earlier `signer` envelope field, `AuthManager` registry, frame-specific signature hash, or envelope expiry.
-
 ## Motivation
 
-The current scalar sender nonce serializes unrelated operations. It also requires counter coordination for short-lived actions. Meanwhile, arbitrary sender validation remains difficult to relay publicly when it cannot safely run under the restrictive mempool rules, and non-secp256k1 accounts still cannot satisfy applications that directly use `ECRECOVER`.
+EIP-8141 currently has four gaps:
 
-These changes address those gaps without moving account policy into a protocol Keystore or mandatory signer registry.
+- Every transaction uses the sender's single nonce, so unrelated actions cannot progress independently.
+- Short-lived transactions still require wallets and relayers to coordinate a counter.
+- The public mempool cannot safely relay accounts whose validation falls outside its restricted simulation rules unless another party accepts the cost of failed validation.
+- Existing permit, order, and meta-transaction contracts often call `ECRECOVER` directly, preventing accounts that use P256, passkeys, post-quantum signatures, or other authentication schemes from using them.
+
+Keyed replay domains separate unrelated transaction flows. Nonceless mode removes counter coordination for short-lived transactions. Guarantors make arbitrary sender validation relayable by paying even when validation fails. Signer binding lets account-defined authentication work with existing `ECRECOVER` contracts. Account authorization remains in account code.
 
 ## Specification changes
 
