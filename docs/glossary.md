@@ -1,69 +1,61 @@
 # Glossary
 
-_Single canonical definition per term used in this repo. Each entry tagged `(current EIP-8141)` if the concept comes from EIP-8141 itself, `(introduced here)` if it is added by a proposal in this repo, or `(adjacent)` if it comes from a separate EIP / PR that the proposals build on._
+## Current EIP-8141
 
-## Transaction model
+**Frame transaction.** EIP-8141 transaction composed of ordered `DEFAULT`, `VERIFY`, and `SENDER` frames.
 
-**Frame transaction** _(current EIP-8141)_. The native account-abstraction transaction shape introduced by EIP-8141. A tx is a sequence of typed frames executed in order, each frame carrying a target, value, data, and a mode (VERIFY or SENDER).
+**Signature entry.** Outer transaction object `[scheme, signer, msg, signature]`. Protocol-validated schemes currently include secp256k1 and P256; `ARBITRARY` carries account-validated witnesses.
 
-**VERIFY frame** _(current EIP-8141)_. A frame that runs an account's default code in a validation phase. Calls to `APPROVE` from a VERIFY frame set tx-scoped state (e.g., `payer_approved`, `guarantor`).
+**Canonical signature hash.** Hash over the full transaction with raw signature bytes elided for entries whose `msg` is empty.
 
-**SENDER frame** _(current EIP-8141)_. A frame that executes user-intended action. `msg.sender` defaults to `tx.sender`.
+**Expiry verifier frame.** Built-in `VERIFY` frame at `EXPIRY_VERIFIER` carrying an eight-byte signed deadline.
 
-**Default code** _(current EIP-8141)_. The protocol-supplied bytecode that runs in a VERIFY frame for an EOA that has not delegated to custom code. Default code is where standard tx authentication lives.
+**Execution gas / state gas.** Independent per-frame budgets for computation/access and durable state growth.
 
-**APPROVE scope** _(current EIP-8141; guarantors proposed in PR #11555)_. The opcode emitted by a VERIFY frame to set tx-scoped state. Current scopes approve execution, payment, or both; this proposal adds `APPROVE_GUARANTEE` (`0x4`) as a fourth scope bit.
+**Validation prefix.** Shortest frame prefix whose successful execution sets the payer; the public mempool simulates or directly evaluates only this prefix.
 
-**sighash** _(current EIP-8141)_. The hash signed by the tx-level signature, computed by `compute_sig_hash`. VERIFY-frame `data` is elided; SENDER frames are not. See [`appendix/sighash-binding.md`](appendix/sighash-binding.md).
+## Rebased additions
 
-## Primitives
+**Guarantor.** Canonical paymaster that approves payment before sender validation and pays even if sender authentication fails.
 
-**Flexible nonces** _(introduced here; aka **2D nonces**)_. Per-account parallel nonce streams. The stream selector is `nonce_key` in the standalone proposal and `signer` in the aggregated proposals. Spec: [`proposals/flexible-nonces.md`](proposals/flexible-nonces.md).
+**`APPROVE_GUARANTEE`.** Approval scope `0x4`. It escrows the maximum transaction cost without approving sender execution or consuming the sender's selected replay protection.
 
-**`nonce_key`** _(introduced here; standalone Flexible-nonces only)_. Envelope field, `uint256`, default 0. Selects the nonce stream a tx sequences against in `NonceManager`. Key 0 is the legacy account-nonce path.
+**Guarantor nonce.** Per-sender replay counter in the canonical paymaster, advanced by `bumpNonce` when sender validation fails.
 
-**`signer`** _(introduced here; Key-streams / Auth-scopes / consolidated EIP)_. Envelope field, `uint64`, default 0. Selects a registered signer entry in `AuthManager` and the per-signer nonce stream. Replaces `nonce_key` in the AuthManager-using proposals because PQ pubkeys are too large to index protocol state directly; `signer` is the small uint64 indirection. Signer 0 is reserved for the legacy ECDSA / account-nonce path.
+**Signer binding.** Transaction-scoped authorization making `ECRECOVER(digest, ...)` return an account address after that account's binding frame validates and returns the digest.
 
-**Stream** _(introduced here)_. One `(sender, stream_selector)` slot of nonce state, where `stream_selector` is `nonce_key` standalone or `signer` aggregated.
+**`SIGNER_BINDING_FLAG`.** Frame flag `0x10`, valid only on a standalone `VERIFY` frame with no approval scope.
 
-**`NonceManager`** _(introduced here)_. Immutable system contract holding per-account per-key 64-bit sequence numbers. Used by the standalone Flexible-nonces alternative. Spec: [`appendix/system-contracts.md`](appendix/system-contracts.md).
+**Verified-signers table.** Transaction-scoped `digest -> address` map capped at eight entries. It is populated from successful signer-binding frame return data.
 
-**Expiry verifier frame** _(current EIP-8141; merged in upstream after this repo's first PR)_. Built-in `VERIFY` frame whose `frame.target == EXPIRY_VERIFIER = address(0x8141)` and whose 8-byte `frame.data` is a unix-seconds deadline covered by `compute_sig_hash`. Public mempool drops the tx deterministically once `block.timestamp > deadline`. Used by the consolidated EIP for any deadline use-case; supersedes the Envelope-expiry alternative below.
+**Approved scope.** Actual scope used by a completed frame's successful `APPROVE`, exposed as `FRAMEPARAM(0x0C)`.
 
-**Envelope expiry** _(introduced here; **comparison only**)_. Alternative shape adding a `uint64 expiry` envelope field. Subsumed by the upstream expiry verifier frame and dropped from the consolidated EIP. Preserved as comparison surface. Spec: [`proposals/envelope-expiry.md`](proposals/envelope-expiry.md).
+## Native keyed nonces
 
-**Validity windows** _(introduced here; **comparison only**)_. Two-sided envelope-level validity bounds via `valid_after` + `valid_before`. Subsumed by the upstream expiry verifier frame for the `valid_before` side; the `valid_after` (scheduled activation) component is out of scope for the consolidated EIP. Spec: [`proposals/validity-windows.md`](proposals/validity-windows.md).
+**Nonce key set.** Strictly increasing list of one to sixteen `uint256` replay-domain keys sharing one `uint64 nonce_seq`.
 
-**`expiry`** _(Envelope-expiry alternative only; not in the consolidated EIP)_. Envelope field, `uint64`, unix seconds; 0 = no bound. A tx is consensus-invalid if `block.timestamp >= expiry`.
+**Legacy nonce key.** Singleton set `[0]`, which aliases the sender's account nonce.
 
-**`valid_after`** _(Validity windows only; not in the consolidated EIP)_. Envelope field, `uint64`, unix seconds; 0 = no lower bound.
+**`NONCE_MANAGER`.** EIP-8141 system-contract state holding non-zero nonce-key sequences.
 
-**`valid_before`** _(Validity windows only; not in the consolidated EIP)_. Envelope field, `uint64`, unix seconds; 0 = no upper bound.
+**Replay independence.** Property that consuming one non-zero key set does not advance a disjoint key set. It does not by itself remove balance or validation-state dependencies.
 
-**Signer binding** _(introduced here)_. Tx-scoped mechanism letting a PQ VERIFY frame bind `(digest, address)` claims that `ECRECOVER` resolves on subsequent calls within the same tx. Spec: [`proposals/signer-binding.md`](proposals/signer-binding.md).
+## Native nonceless mode
 
-**Verified-signers table** _(introduced here)_. The tx-scoped `map[digest32 -> address]` populated by binding VERIFY frames and queried by `ECRECOVER`. Spec: [`appendix/verified-signers.md`](appendix/verified-signers.md).
+**`NONCE_KEY_MAX`.** Singleton EIP-8141 key-set sentinel `[2**256 - 1]` selecting counter-free mode.
 
-**`PubkeyRegistry`** _(introduced here)_. Immutable system contract holding per-account `(scheme, pubkey)` for PQ accounts. Used by the standalone Signer-binding alternative. Spec: [`appendix/system-contracts.md`](appendix/system-contracts.md).
+**Replay identifier.** Fee- and raw-signature-invariant hash of the logical transaction used for nonceless deduplication and replacement.
 
-**`AuthManager`** _(introduced here)_. Immutable system contract holding both keyed nonce streams and per-account signer entries `(scheme, pubkey)`. Replaces `NonceManager` + `PubkeyRegistry` in the Key-streams and Auth-scopes alternatives, and in the consolidated [`/eip-8141.md`](../EIPS/eip-8141.md) execution. Spec: [`appendix/system-contracts.md`](appendix/system-contracts.md). Reference impl: [`assets/eip-8141/AuthManager.sol`](../assets/eip-8141/AuthManager.sol).
+**Replay buffer.** Fixed-capacity consensus ring plus live map holding `(sender, replay_id, expiry)` until expiry.
 
-**Guarantor** _(adjacent, [PR #11555](https://github.com/ethereum/EIPs/pull/11555))_. A tx-scoped role that commits to paying gas if sender VERIFY fails. Lets shared-state-read risk be priced as economic risk rather than mempool-policy risk. Spec: [`appendix/guarantors.md`](appendix/guarantors.md).
+**`NONCELESS_REPLAY_MANAGER`.** EIP-8141 system account holding the domain-separated replay ring, cursor, and live map.
 
-## Mempool tiers _(current EIP-8141; vocabulary refined here)_
+**Nonceless expiry window.** Consensus maximum between inclusion time and the required expiry-verifier deadline.
 
-**Restrictive tier**. Public-mempool default. Deterministic checks; bounded reads against system contracts; no environmental opcodes during validation.
+## Removed terminology
 
-**Expansive tier**. Wider-mempool / opt-in propagation. Tolerates shared-state reads and environmental opcodes during validation.
+**`AuthManager`.** Removed local registry that coupled nonce streams and stored pubkeys. Replaced by native EIP-8141 keyed state for nonces and account-defined signature-list validation for signer binding.
 
-**Private (direct-to-builder)**. Sent to specific builders out-of-band; no mempool propagation.
+**Keyed signer stream.** Removed coupling between one signer ID and one nonce. Current nonce keys and signature entries are independent.
 
-Reference: [`appendix/mempool-tiers.md`](appendix/mempool-tiers.md).
-
-## Sighash binding analysis _(introduced here)_
-
-**Class A binding**. Protocol-visible data whose validity depends only on the tx (e.g., `nonce_key` / `signer`). MUST be covered by the tx sighash; lives in the envelope. Deadlines also fall in this class but the upstream expiry verifier frame carries them inside `frame.data` of a special `VERIFY` frame, which is exempted from VERIFY-data elision in `compute_sig_hash`, so they are sighash-covered without needing an envelope field.
-
-**Class B binding**. Protocol-visible data whose validity depends on an independent signature chain (e.g., signer-binding claims verified under a registered PQ pubkey). Does not require tx-sighash coverage.
-
-Reference: [`appendix/sighash-binding.md`](appendix/sighash-binding.md).
+**Frame signature hash.** Removed auxiliary hash that elided one frame's data. Current signature-list hashing makes it unnecessary.

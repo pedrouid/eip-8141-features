@@ -1,21 +1,15 @@
-# 1 Contract, 1 Field, 3 Features
+# Rebase the Outcomes, Not the Old Mechanisms
 
-_Why EIP-8141 should land the remaining three upgrades as a single bundle._
+EIP-8141 changed underneath this project. It gained a signature list, P256 validation, arbitrary signature witnesses, signature introspection, explicit execution/state gas, stricter atomic batches, and a much fuller public-mempool model. The old proposal's `signer` field, frame-specific hash, and `AuthManager` registry no longer fit that architecture.
 
-EIP-8141 is the one realistic chance to ship account abstraction into the protocol layer. The previous PR ([ethereum/EIPs#11643](https://github.com/ethereum/EIPs/pull/11643)) bundled four additions: **guarantors**, **flexible nonces**, **signer binding**, and **envelope expiry**. Upstream has since merged an in-spec **expiry verifier frame** at `EXPIRY_VERIFIER = address(0x8141)` that handles deadlines as the 8-byte `frame.data` of a special `VERIFY` frame, covered by `compute_sig_hash` and dropped deterministically from the public mempool when expired. That merged change subsumes envelope expiry, so the new PR drops the field and ships the remaining three additions. The features could be independent. Splitting them costs more code, not less.
+The goals still hold.
 
-**Guarantors and flexible nonces**
-A guarantor commits to paying gas even when sender VERIFY fails. To stay replay-safe, the sender's nonce must advance on inclusion regardless of validation outcome. The legacy account-nonce model fights this. Flexible nonces give it natively: per-signer streams that consume one slot per included transaction, success or failure. One feature unlocks the other.
+Guarantors remain the cleanest way to relay accounts whose validation cannot be safely simulated by every public node. The rebase keeps the payer commitment and fallback replay nonce, but uses the canonical signature list instead of embedding a signature in frame data. Because empty-`msg` signature bytes are elided, sender and guarantor independently sign the same complete transaction.
 
-**Flexible nonces and signer binding**
-Both require protocol-managed state per sender, keyed by an identifier into a system contract. Standalone, that is two reserved addresses, two code hashes, two RPC roots. Bundled, it is one `AuthManager` holding both nonce streams and registered pubkey signers, indexed by the same `(account, signer)` tuple. Half the state surface, half the upgrade cost.
+Signer binding remains necessary for Ethereum's immutable contract base. New account code can understand P256 or post-quantum signatures, but deployed permit contracts still ask `ECRECOVER` for an address. A binding frame now lets account code validate an application digest with `SIGPARAM` or `SIGDATACOPY`, return the digest, and populate a transaction-scoped compatibility table. No persistent pubkey registry is needed.
 
-**Signer binding and guarantors**
-Both depend on the mempool admitting transactions without simulating sender VERIFY. Together they give post-quantum accounts a credible path to the public mempool. Split apart, each has to win the same mempool argument on its own.
+Parallel nonces now live directly in EIP-8141. The integrated ordered sets of full-width nonce keys preserve privacy-nullifier and multi-domain outcomes that the old single-signer stream discarded. EIP-8250 remains the design source, not a required companion activation.
 
-**Deadlines, already merged**
-The upstream expiry verifier frame is the canonical deadline mechanism: one envelope-cost-free byte of `frame.data` per tx that opts in, zero per-tx cost for everything else. It composes cleanly with the statelessness roadmap and with each of the three additions above, with no envelope changes from this proposal.
+EIP-8130 contributes a nonce-free sentinel backed by short expiry and bounded replay state. The lesson is not that nonce counters can simply disappear: the counter is replaced by a fee- and signature-invariant logical identifier plus a consensus ring buffer. The rebase now makes this a native EIP-8141 mode, with concrete storage, reorg, and EIP-8037 state-gas rules. Ethereum-specific expiry-window and capacity values remain a Draft activation gate.
 
-**Learn the background:** The history and evolution of EIP-8141, deep-dive into AA topics and what the current spec can already do today -> [eip8141.io](https://eip8141.io).
-
-**Review the PR:** Jump into the new PR and participate in the discussion and give feedback to determine what ships for native AA -> [ethereum/EIPs#11643](https://github.com/ethereum/EIPs/pull/11643).
+The result is smaller where upstream became stronger and more explicit where the remaining compatibility gaps are real.

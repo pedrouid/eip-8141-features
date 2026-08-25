@@ -1,89 +1,44 @@
-# Verified-Signers Table and Modified ECRECOVER
+# Verified Signers
 
-```
-Canonical for:  verified-signers table, modified ECRECOVER (hit-path-first lookup)
-Referenced by:  Signer binding, Key streams, Auth scopes
-```
+## Table
 
-_Canonical specification of the tx-scoped verified-signers table and the modified `ECRECOVER` semantics that back **signer binding**. Single source of truth referenced by [`signer-binding.md`](../proposals/signer-binding.md), [`key-streams.md`](../proposals/key-streams.md), and [`auth-scopes.md`](../proposals/auth-scopes.md). Background and registry state in [`appendix/system-contracts.md`](system-contracts.md) and [`appendix/pq-analysis.md`](pq-analysis.md)._
+Each frame transaction initializes:
 
-## Why signer binding exists
-
-EIP-8141's tx-level authentication is PQ-flexible via the VERIFY-frame `signature_type` byte. But immutable contracts that call `ECRECOVER` on an application digest (ERC-2612 `permit`, WETH, raw `ecrecover`) derive the signer from a secp256k1 signature and cannot be redeployed. PQ accounts are locked out of every existing `ECRECOVER` caller.
-
-Signer binding threads the needle: a PQ VERIFY frame *proves* `(digest, address)` ahead of execution, and `ECRECOVER` looks the answer up. The 0x01 ABI keeps returning an address. The recovery step is replaced by a table consult populated from `verify(pk, msg, sig)` in a prior frame. Immutable contracts continue to work without redesign.
-
-## Tx-scoped verified-signers table
-
-```
-table: map[digest32 -> address]
+```text
+verified_signers: map[bytes32 digest -> address account]
 ```
 
-Lifecycle:
+The table is transaction-scoped, capped at `MAX_BOUND_SIGNERS = 8`, and discarded after settlement.
 
-1. **Cleared** at tx entry (alongside other tx-scoped state).
-2. **Populated** during VERIFY-frame execution.
-3. **Queried** during SENDER-frame execution by any `ECRECOVER` call.
+## Population
 
-Per-tx cap: `MAX_BOUND_SIGNERS = 8`. Bounds table-population cost; matches approve + swap + repay redemption shapes.
+A frame may populate the table only when:
 
-## Population rule
+1. `frame.mode == VERIFY`;
+2. `frame.flags == SIGNER_BINDING_FLAG`;
+3. `frame.target` is explicit and non-null;
+4. the frame succeeds under normal `VERIFY` restrictions;
+5. return data is a non-empty multiple of 32 bytes.
 
-A VERIFY frame binds a `(digest, address)` pair iff all of:
+Each 32-byte return word is a digest bound to `frame.target`. Re-inserting the same pair is a no-op. Binding an existing digest to another target reverts. Exceeding the cap reverts.
 
-1. `signature_type != 0x0` (secp256k1 needs no binding).
-2. The frame uses the **binding payload** sub-mode (`sub_mode = 0x01`): `frame.data = [signature_type, 0x01, application_digest (32 bytes), signature]`. This is distinct from the tx-auth sub-mode, which always binds `compute_sig_hash(tx)`; see the consolidated `eip-8141.md` default-code section.
-3. The signature verifies under the declared scheme using the pubkey resolved from the active signer registry, `PubkeyRegistry.get(frame.target)` for the standalone Signer-binding proposal or `AuthManager.getSigner(frame.target, signer)` for the Key-streams / Auth-scopes proposals (where `signer` comes from the envelope; see [`appendix/system-contracts.md`](system-contracts.md)), bound to `frame.target` by the scheme's address rule.
-4. The frame's `allowed_scope` does not include any tx-execution or payment scope (`APPROVE_EXECUTION`, `APPROVE_PAYMENT`, `APPROVE_PAYMENT_AND_EXECUTION`, `APPROVE_GUARANTEE`). Binding-only frames must not authorize the transaction.
+The account code decides how authorization is proven. It may inspect protocol-validated signature metadata through `SIGPARAM`, copy an `ARBITRARY` witness through `SIGDATACOPY`, and apply account storage or delegation policy. No registry lookup is implied by the protocol.
 
-Multiple bindings per frame are allowed, up to the per-tx cap (`MAX_BOUND_SIGNERS = 8` map entries). Entries are write-once: a second insert with the same `(digest, address)` is a no-op; a conflict (same `digest`, different `address`) reverts the frame.
+## `ECRECOVER`
 
-## Modified ECRECOVER
-
-```
-ECRECOVER(digest, v, r, s):
-    if digest in tx.verified_signers:
-        return tx.verified_signers[digest]            // bound-signer hit
-    return existing_secp256k1_recover(digest, v, r, s) // unchanged; EIP-8151 still applies
+```python
+def ECRECOVER(digest, v, r, s):
+    if digest in verified_signers:
+        return verified_signers[digest]
+    return existing_secp256k1_recover(digest, v, r, s)
 ```
 
-- Hit-path cost: 3000 gas (constant-time table lookup; cheaper than an EC operation).
-- On hit, `(v, r, s)` are unconstrained; wallets pass zeros.
-- Miss-path is byte-identical to today.
+The hit ignores `v`, `r`, and `s`. The miss path is unchanged. The existing precompile gas cost applies to both.
 
-## Mempool admission
+## Frame isolation
 
-Restrictive-tier admissible: pubkey resolution is one storage slot read against the active signer registry (`PubkeyRegistry` standalone, `AuthManager` aggregated). The 100 000 validation-prefix gas cap absorbs PQ verification once stage-2 PQ precompiles ship. Before then, signer-binding txs route through the expansive tier. See [`appendix/mempool-tiers.md`](mempool-tiers.md).
+A binding frame cannot approve execution, payment, or guarantee scope. Its failure is never covered by the guarantor sender-validation exception. The table changes are transaction context, not persistent state, and revert with the binding frame.
 
-The verified-signers table is rebuilt per-tx; RBF and block-invalidation rules are unchanged.
+## Wallet requirement
 
-Sighash binding: in-frame digest claims sit inside VERIFY data, elided as today. The integrity of a binding claim comes from the PQ-signature-over-pubkey check at VERIFY time, not from tx-sighash binding. See [`appendix/sighash-binding.md`](sighash-binding.md) for the full reasoning.
-
-## Composition
-
-- **EIP-8151**: complementary. EIP-8151 zeros revoked-secp256k1-key recovery; signer binding provides the positive PQ path for the same address. A revoked-secp256k1 account with a registered PQ pubkey resolves only via signer binding; un-bound digests return zero.
-- **EIP-8164**: complementary. EIP-8164 reserves an address space rooted in a PQ pubkey hash; signer binding lets that address be recognized by immutable `ECRECOVER` callers.
-
-## Wallet UX
-
-Wallets surface "this tx will let `<contract>` recognize you as `<address>` via `permit`" before signing. Hardware wallets parse the registration tx natively as a one-time onboarding step: `PubkeyRegistry.register(scheme, pubkey)` standalone (one entry per account, no id), or `AuthManager.registerSigner(signer, scheme, pubkey)` aggregated (account picks any non-zero `uint64` `signer` id; `SignerRegistered` is emitted). First-use registration is a one-time SSTORE-from-zero cost.
-
-Permit composition: the wallet adds a binding VERIFY frame whose `digest` matches the EIP-712 hash the contract recomputes; the SENDER frame calls `permit(...)` normally; the contract's internal `ecrecover` resolves via the bound entry.
-
-## Non-goals
-
-- Block-builder aggregation (defer to PQ stage 2).
-- Cross-tx binding (would expand replay surface).
-- Non-32-byte digests.
-- Rotation outside the active signer registry's register / clear pair (`PubkeyRegistry.register` + `clear` standalone, `AuthManager.registerSigner` + `clearSigner` aggregated).
-- Inline envelope pubkeys (see [`appendix/system-contracts.md`](system-contracts.md) and [`appendix/pq-analysis.md`](pq-analysis.md)).
-
-## Spec delta summary
-
-1. Tx-scoped verified-signers table cleared at tx entry, populated during VERIFY, queried during SENDER.
-2. Population rule (four conditions above).
-3. `ECRECOVER` extended with hit-path-first lookup; miss-path byte-identical.
-4. `MAX_BOUND_SIGNERS = 8`.
-5. Restrictive-tier admission via one slot read on the active signer registry (`PubkeyRegistry` or `AuthManager`).
-
-**Zero new envelope fields, zero new opcodes, zero new precompiles, zero account-encoding changes, zero sighash changes.**
+A wallet must show the account being bound, each application digest, and the downstream action that will consume the binding. A canonical transaction signature alone is not evidence that the account intended an arbitrary application digest.

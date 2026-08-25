@@ -1,110 +1,137 @@
-# Compare, Consolidated EIP-8141 Expansion
+# Current EIP-8141 vs Upgraded EIP-8141 vs EIP-8130
 
-_Delta map for the root `eip-8141.md` draft in this repo._
+_Comparison for the consolidated draft in `EIPS/eip-8141.md`._
 
-## Scope
+## Baseline
 
-This proposal is a consolidated expansion of the current EIP-8141 spec. It folds together Guarantors, keyed nonce streams, and signer binding into one PR-shaped document, with supporting assets under `assets/eip-8141/`.
+“Current EIP-8141” means upstream commit `15bc93fd` (August 24, 2026). All three specifications remain Draft.
 
-Primary comparison points:
+Current EIP-8141 already includes frame execution, a signature list, secp256k1/P256/`ARBITRARY` entries, signature introspection, per-frame execution and state gas, atomic batches, the expiry verifier, blob support, and restrictive public-mempool rules.
 
-- Current EIP-8141: [`EIPS/eip-8141.md`](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-8141.md)
-- Guarantors: [PR #11555](https://github.com/ethereum/EIPs/pull/11555/files)
-- Keyed nonces: [PR #11598](https://github.com/ethereum/EIPs/pull/11598/files), draft EIP-8250
+The upgrade adds native keyed and nonceless replay modes, guarantor payment, and transaction-scoped signer binding directly to EIP-8141.
 
-Upstream cleanup PRs already merged and absorbed into the baseline above: [#11621](https://github.com/ethereum/EIPs/pull/11621) (Frames cleanup, section-name restructuring), [#11652](https://github.com/ethereum/EIPs/pull/11652) (atomic batching with any frames), and the **expiry verifier frame** ([`EXPIRY_VERIFIER = address(0x8141)`](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-8141.md#expiry-verifier-frame), an in-spec `VERIFY` frame whose 8-byte `frame.data` is a deadline timestamp covered by `compute_sig_hash` and checked deterministically without simulating any other frame). Deltas below are stated against post-merge upstream.
+## Executive judgment
 
-## Compared To Current EIP-8141
+Current EIP-8141 is an **execution-first** abstraction: accounts remain arbitrary code, while the protocol standardizes validation, payment, execution frames, and gas isolation.
 
-The current spec defines frame transactions, `APPROVE`, default EOA verification, a canonical signature hash, per-frame execution, restrictive mempool prefixes, and the built-in expiry verifier frame. This proposal keeps that architecture but changes the transaction surface and authentication model.
+Upgraded EIP-8141 preserves that boundary. It adds targeted native features without importing an account registry or policy model.
 
-Changed from current EIP-8141:
+EIP-8130 is **configuration-first**: its Keystore, actors, authenticators, scopes, policies, lifecycle operations, and configuration channels make account authority protocol-readable. Canonical validation becomes more predictable, but the protocol owns a much larger account surface.
 
-- Transaction payload gains `signer` (uint64). Deadlines are NOT added to the envelope; they route through the upstream [expiry verifier frame](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-8141.md#expiry-verifier-frame) instead.
-- `tx.nonce` keeps its name, type (`uint64`), and position. Its meaning is `signer`-conditional: legacy account nonce when `signer == 0`, per-signer stream sequence when `signer != 0`. No envelope rename of `nonce`.
-- `APPROVE` gains `APPROVE_GUARANTEE`, expanding approval flags from two scope bits to three.
-- Atomic-batch flag moves from bit `2` to bit `3`.
-- A frame signature hash is added at `TXPARAM(0x0B)` for guarantor signatures that must bind other VERIFY frame data. (Upstream's `0x09 = len(frames)` and `0x0A = currently executing frame index` are preserved; the new entry sits at `0x0B`.)
-- `TXPARAM` gains entries for `signer` (`0x0C`) and pre-state legacy nonce (`0x0D`).
-- Restrictive mempool replacement changes from `(sender, nonce)` to `(sender, signer, nonce)`.
-- `AUTH_MANAGER` is introduced as a single system contract for authentication state.
-- `ECRECOVER` gains a hit-path-first signer-binding lookup while preserving the secp256k1 miss path.
+## Feature matrix
 
-Unchanged from current EIP-8141:
+| Dimension | Current EIP-8141 | Upgraded EIP-8141 | EIP-8130 |
+|---|---|---|---|
+| Transaction | Ordered frames | Frames plus replay, guarantee, binding | Account changes plus call phases |
+| Validation | Arbitrary `VERIFY` code | Same, with guarantee exception | Declared authenticator |
+| Parallel replay | No | 1–16 keys consumed atomically | One selected key |
+| Nonceless | No | Expiry plus consensus replay ring | Validity window plus replay ring |
+| Replay consumption | Payment approval | Payment approval, never guarantee | Before account changes/calls |
+| Failed sender validation | Invalid | Guarantor pays; sender frames skipped | Rejected before inclusion |
+| Sponsorship | Frame-approved payer | Same plus guarantor escrow | Explicit `payer_auth` |
+| Batching | Atomic frame groups | Same | Sequential atomic phases |
+| Gas | Per-frame execution/state | Same plus replay state gas | One execution pool plus intrinsic costs |
+| Native key scopes/expiry | No | No | Yes |
+| Account lifecycle | Wallet code | Wallet code | Keystore create/import/lock/delegation |
+| `ECRECOVER` bridge | No | Transaction-scoped binding | No equivalent override |
 
-- Frame modes remain `DEFAULT`, `VERIFY`, and `SENDER`.
-- Existing opcodes remain the same; no new opcodes are introduced.
-- Existing frame payload shape remains `[mode, flags, target, gas_limit, value, data]`.
-- VERIFY frame data remains elided from the canonical signature hash.
-- No account RLP encoding changes are introduced.
+## Three areas where EIP-8130 is stronger
 
-## Compared To Guarantors PR
+1. **Predictable authentication.** Transactions declare an authenticator. Canonical authenticators have enshrined behavior and fixed validation cost, reducing arbitrary wallet-code simulation and mempool invalidation.
+2. **Account lifecycle and portability.** The Keystore standardizes account creation, import, actor changes, locking, delegation, local epochs, and multichain configuration.
+3. **Least-privilege actors.** Protocol scopes distinguish initiation, sequenced nonce use, self-payment, sponsorship, and administration. Actors also support expiry and policy-manager gates.
 
-PR #11555 adds a guarantor payer that can make a tx public-mempool admissible without simulating sender validation. This proposal keeps that core mechanism.
+## Three areas where upgraded EIP-8141 is stronger
 
-Kept from PR #11555:
+1. **Atomic multi-key replay.** One transaction can consume up to sixteen ordered nonce domains. EIP-8130 selects exactly one channel.
+2. **Guarantor-backed validation.** Validation unsafe for public-mempool simulation may fail during block execution while the guarantor still pays. EIP-8130 requires sender authentication before inclusion.
+3. **Existing-application compatibility.** Signer-binding frames let non-secp256k1 account validation authorize digests consumed by existing `ECRECOVER`-based permits and orders.
 
-- `APPROVE_GUARANTEE` as a distinct approval scope.
-- `guarantor_approved` / payer state in transaction execution.
-- Transaction validity via `guarantor_approved OR (sender_approved AND payer_approved)`.
-- Canonical guarantor prefix in restrictive mempool policy.
-- Frame signature hash for guarantor mode.
-- Canonical paymaster asset extended to support paymaster mode and guarantor mode.
+## Keyed and nonceless replay
 
-Changed from PR #11555:
+The upgraded envelope is:
 
-- Sender nonce handling is replaced by per-signer nonce streams, so inclusion consumes `(sender, signer, nonce)` through `AUTH_MANAGER`.
-- Guarantor replay discussion is integrated with keyed nonce semantics rather than relying only on the canonical paymaster's per-sender guarantor nonce.
-- The canonical paymaster remains a guarantor asset, but global replay protection for the sender transaction is handled by the frame transaction's keyed nonce domain.
-- The proposal adds signer binding after guarantor semantics, so the final `TXPARAM` table has more entries than PR #11555.
+```text
+[chain_id, nonce_keys, nonce_seq, sender,
+ frames, signatures, fees, blob_versioned_hashes]
+```
 
-Main integration rule: Guarantors must stay the mempool-admission primitive. Flexible nonces and signer binding must not require public mempool nodes to simulate sender validation when a valid canonical guarantor prefix is present.
+- `[0]` uses the sender’s legacy account nonce.
+- Non-zero keys below `NONCE_KEY_MAX` use protocol-managed state.
+- Multiple keys share one sequence and advance atomically.
+- `[NONCE_KEY_MAX]` selects nonceless mode with sequence zero.
 
-## Compared To Keyed Nonces PR
+These mechanics are normative EIP-8141 behavior, not a dependency on another parallel-nonce EIP. First use of a non-zero key creates 64 durable bytes and costs `97,920` state gas.
 
-PR #11598 proposes EIP-8250 as a sibling EIP requiring EIP-8141. This proposal folds the keyed-nonce mechanism directly into the EIP-8141 expansion.
+Both upgraded EIP-8141 and EIP-8130 use the same nonceless safety pattern: short expiry, a logical replay ID excluding fees and signature bytes, a live-entry map, and a fixed circular buffer.
 
-Kept from PR #11598:
+The integration differs:
 
-- Payload adds `signer` (uint64) instead of PR #11598's `nonce_key` (uint256); existing `nonce` field is reinterpreted as the per-signer stream sequence when `signer != 0`. The rename and width drop are deliberate: `signer` is also the key of the registered signer entry in `AUTH_MANAGER`, and uint64 is enough for the per-account namespace once stream selectors are tied to registered signers rather than free-form keys. No envelope rename of `nonce`.
-- `signer == 0` aliases the legacy account nonce path (no `AUTH_MANAGER` lookup).
-- Non-zero per-signer streams live in protocol-managed system-contract storage.
-- `nonce` stays `uint64`; `signer` is `uint64` (vs. PR #11598's `nonce_key: uint256`).
-- First use of a non-zero signer is charged with `KEYED_NONCE_FIRST_USE_GAS = 20000`.
-- `TXPARAM` exposes `signer` and pre-state legacy sender nonce.
-- Replacement is keyed by `(sender, signer, nonce)`.
+- EIP-8130 records replay before account changes and calls.
+- EIP-8141 records it only at sender-authorized payment approval.
+- A guarantee never consumes sender replay state.
+- EIP-8141 reuses its expiry-verifier frame instead of new envelope windows.
+- EIP-8141 reserves up to `391,680` state gas plus `13,000` execution gas for replay insertion.
 
-Changed from PR #11598:
+`NONCELESS_EXPIRY_WINDOW` and `REPLAY_BUFFER_CAPACITY` remain coupled L1 activation parameters:
 
-- The system contract is named `AUTH_MANAGER`, not `NONCE_MANAGER`. The rename is load-bearing: a `NONCE_MANAGER` is a one-purpose registry, but `AUTH_MANAGER` is the canonical authentication-state contract for the account model. Keyed nonce streams and PQ signer registrations are both authentication state, and EIP-8141 needs the latter so accounts can use non-recoverable signature schemes (lattice, multivariate, hash-based) recognized by immutable `ECRECOVER` callers. Putting both behind one address means a single canonical contract carries the full identity surface for any signature scheme the protocol supports, present or future, instead of forking the upgrade into two parallel registries with two pubkey-resolution paths.
-- `AUTH_MANAGER` stores both keyed nonce streams and signer registrations under one storage layout.
-- `AUTH_MANAGER` has actual contract semantics in [`assets/eip-8141/AuthManager.sol`](../assets/eip-8141/AuthManager.sol), including `registerSigner` (account picks the `signer` id, must be non-zero), `clearSigner`, `getSigner`, `getNonce`, `checkNonce`, and `advanceNonce`.
-- Keyed nonces are part of the same PR as Guarantors and signer binding rather than a separate EIP.
-- The nonce-consumption rule is stated as successful inclusion regardless of sender VERIFY outcome, to compose with guarantor-backed txs.
+```text
+REPLAY_BUFFER_CAPACITY >= peak nonceless throughput
+                          × NONCELESS_EXPIRY_WINDOW
+```
 
-Main integration rule: nonce streams and signer registrations are both authentication state. Pubkeys remain variables and calldata inputs, but account-facing terminology is signer-centric.
+## Guarantor and signer-binding behavior
 
-## New Beyond Those Specs
+`APPROVE_GUARANTEE` escrows maximum cost without consuming sender replay. The canonical paymaster authenticates the full transaction shape and the required settlement frame. Successful sender validation lets settlement consume replay and retain the guarantor as payer. Failed validation advances the paymaster’s `guarantor_nonce`, skips later `SENDER` frames, and still charges the guarantor.
 
-Signer binding is new relative to current EIP-8141, PR #11555, and PR #11598. It adds:
+A signer-binding `VERIFY` frame returns one to eight application digests. The protocol maps each digest to the frame target for this transaction. `ECRECOVER` returns the binding on a hit and keeps existing secp256k1 behavior on a miss. No persistent pubkey registry is introduced.
 
-- Registered signers in `AUTH_MANAGER`.
-- A tx-scoped `verified_signers` table.
-- Binding VERIFY frames that prove `(digest, address)` claims under registered signer material.
-- Modified `ECRECOVER`: table hit returns the bound address; miss follows existing secp256k1 behavior.
-- `MAX_BOUND_SIGNERS = 8`.
+## Implementation complexity
 
-## Deadlines: dropped from envelope, routed through upstream expiry verifier frame
+EIP-8130 has the broadest **total account and product surface**: Keystore storage, actors, scopes, policies, configuration replay, import, lock, delegation, canonical authenticators, and native/EVM equivalence.
 
-Earlier revisions of this consolidated proposal added a `uint64 expiry` envelope field with a pre-frame consensus check, two ready/expired RBF rules, two JSON-RPC error codes, and `TXPARAM(0x0E)`. Upstream subsequently merged a built-in [expiry verifier frame](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-8141.md#expiry-verifier-frame) at `EXPIRY_VERIFIER = address(0x8141)`: an in-spec `VERIFY` frame whose 8-byte `frame.data` is the deadline timestamp, covered by `compute_sig_hash`, dropped from the public mempool deterministically when expired, with `TIMESTAMP` permitted only inside this frame's canonical runtime. The verifier-frame mechanism subsumes every load-bearing property the envelope-expiry design provided: consensus-enforced deadline, sig-hash coverage, deterministic ready/expired classification, no future-valid state, no simulation cost outside that one frame.
+Upgraded EIP-8141 has the most intricate **transaction state machine**: frame journals, two gas dimensions, payment-time replay, atomic key sets, consensus replay-ring state, a permitted failed-validation path, payer override/refund, and `ECRECOVER` binding.
 
-Folding deadlines into the envelope on top of this would mean paying the byte cost on every tx that does not use one, and forcing two parallel deadline paths through the spec (envelope check + verifier-frame check). The envelope `expiry` field, its pre-frame check, the `TXPARAM(0x0E)` exposure, the two JSON-RPC error codes, and the expired-eviction RBF rules are therefore dropped from this consolidated proposal. The standalone alternative [`proposals/envelope-expiry.md`](proposals/envelope-expiry.md) and its two-sided sibling [`proposals/validity-windows.md`](proposals/validity-windows.md) are preserved under `docs/proposals/` as comparison surface only; neither is part of the consolidated bundle.
+| Client area | Current 8141 | Upgraded 8141 | EIP-8130 |
+|---|---|---|---|
+| Execution control | High | Very high | Medium/high |
+| Account lifecycle | Low | Low | Very high |
+| Canonical validation | Complex simulation | Same ordinary path | Most predictable |
+| Mempool dependencies | High | Very high | Low canonical; higher permissive |
+| Resource accounting | Two-dimensional | Two-dimensional plus replay | One-dimensional plus intrinsic schedule |
 
-## Assets
+The upgrade conservatively keeps one public pending transaction per sender. Disjoint nonce keys remove replay ordering but do not isolate sender balance, payer balance, account storage, validation dependencies, or replay-ring capacity.
 
-Current EIP-8141 has `assets/eip-8141/CanonicalPaymaster.sol`. This proposal changes assets to:
+## Requirements and unresolved gates
 
-- `CanonicalPaymaster.sol`: adds guarantor mode, `APPROVE_GUARANTEE`, frame-signature-hash validation, and guarantor nonce support.
-- `AuthManager.sol`: new single authentication-state system contract for keyed nonces and registered signers.
+Upgraded EIP-8141 additionally requires:
 
-No separate nonce-manager or pubkey-registry asset is used. No expiry-related asset is needed: the upstream expiry verifier contract is part of the baseline.
+- `NONCE_MANAGER` at `address(0x8250)` with fixed reverting code;
+- `NONCELESS_REPLAY_MANAGER` at `address(0x8142)`;
+- fixed L1 expiry and capacity values;
+- the updated canonical paymaster and settlement ABI;
+- transaction-scoped signer state and altered `ECRECOVER` lookup;
+- clean replacement of the earlier Draft `0x06` encoding.
+
+Before upstreaming:
+
+1. benchmark replay capacity, saturation, reorgs, pruning, and database amplification;
+2. publish executable vectors for every replay, approval, guarantee, and binding branch;
+3. build two independent execution-client prototypes;
+4. differentially test canonical-paymaster Solidity and client behavior;
+5. mutation-test replay-ID inclusion and exclusion rules;
+6. prove failed guaranteed validation cannot consume sender replay or execute sender frames;
+7. audit signer-binding domain separation across permit and order protocols.
+
+## Recommendation
+
+Keep keyed replay, nonceless mode, guarantors, and signer binding inside EIP-8141. Replay consumption is inseparable from `APPROVE`, payer selection, frame gas, receipts, and guarantor settlement.
+
+Do not import EIP-8130’s Keystore, actor registry, scope vocabulary, account locks, multichain configuration, or profile-dependent authenticator policy. Those would replace EIP-8141’s “account as code” boundary rather than extend it.
+
+## Sources
+
+- [Current EIP-8141](https://github.com/ethereum/EIPs/blob/15bc93fd63181f6d1af31e9a93f33f922d13286b/EIPS/eip-8141.md)
+- [EIP-8130](https://github.com/ethereum/EIPs/blob/15bc93fd63181f6d1af31e9a93f33f922d13286b/EIPS/eip-8130.md)
+- [`EIPS/eip-8141.md`](../EIPS/eip-8141.md), upgraded Draft
+- [`EIPS/eip-8141.diff`](../EIPS/eip-8141.diff), exact upstream delta

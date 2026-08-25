@@ -1,7 +1,7 @@
 # PQ Signatures vs. ECRECOVER on the EVM
 
 ```
-Canonical for:  NIST PQC + MAYO-2 sizing; reth pipeline grounding for PQ identity
+Canonical for:  PQ sizing and the ECRECOVER compatibility problem
 Referenced by:  Signer binding, Key streams, Auth scopes
 ```
 
@@ -23,7 +23,7 @@ Every NIST PQC scheme has the API `verify(pk, msg, sig) -> bool`. None has a rec
 
 So you cannot derive an address from a PQ signature, you cannot verify a PQ signature against an address, and there is no PQ analogue of "I have `(hash, r, s, v)`, give me the sender."
 
-**This is the load-bearing constraint behind signer binding.** The pubkey-size discussion below is a separate concern; it affects *how* pubkeys are made available, not *whether* a lookup is needed. A lookup is unavoidable for every PQ scheme.
+**This is the load-bearing constraint behind signer binding.** The pubkey-size discussion below is separate; it affects how verification material reaches account code. Verification needs a public key, but that key may come from transaction witness data, account storage, or a future public-key alias. A persistent protocol registry is not unavoidable.
 
 ## Sizes vs. secp256k1
 
@@ -49,7 +49,7 @@ A 65-byte secp256k1 sig becomes a 100 B-30 KB blob depending on scheme.
 
 **Pubkey-size pressure is exclusive to lattice and multivariate.** Hash-based pubkeys (SLH-DSA: 32-64 B) are comparable to secp256k1. The kilobyte-scale pubkey problem is lattice (897 B-2.6 KB) and multivariate (1.2-5.5 KB). Per-tx *signatures* are a separate cost no registry shortcuts: hash-based sigs are kilobyte-scale (SLH-DSA-128f ≈ 17 KB), lattice and multivariate are 180 B-4.6 KB.
 
-**Registry-based pubkey storage is the right call for all families.** Storing the pubkey once bounds per-tx cost to one signer-entry read regardless of scheme. Lattice and multivariate save kilobytes per tx. For hash-based the case is uniform interface, not size: supporting both pubkey-by-reference and pubkey-by-value forks the protocol into two binding chains, two mempool stories, and two RPC shapes. Forward compatibility matters: future schemes shouldn't relitigate the binding-chain decision. See [`appendix/system-contracts.md`](system-contracts.md).
+**Persistent storage is not uniformly cheaper.** Lattice and multivariate keys create calldata pressure, but reading a multi-slot key also creates witness and cold-access cost. Current EIP-8141 deliberately leaves future public-key aliases as a separate extension, while EIP-8130 keeps public material in authentication calldata. The rebased signer-binding design follows that separation: account code chooses storage, calldata, or a future alias without making one representation a consensus requirement.
 
 **Family tradeoffs**:
 
@@ -57,7 +57,7 @@ A 65-byte secp256k1 sig becomes a 100 B-30 KB blob depending on scheme.
 - **Lattice (ML-DSA, Falcon)**: balanced sizes, fast verify. Falcon has smallest combined pk+sig (~1.5 KB) but harder constant-time impl; ML-DSA is the default. Performant pick for hot wallets.
 - **Multivariate (MAYO)**: smallest PQ signatures (180-838 B), larger pubkeys (1.2-5.5 KB). Not yet NIST-standardised. Attractive for bandwidth-bound per-tx footprints.
 
-Operators may want different schemes per account profile. EIP-8141 stays scheme-agnostic; the `signature_type` registry supports the full set.
+Operators may want different schemes per account profile. EIP-8141 stays scheme-agnostic; custom schemes use `ARBITRARY` entries until a future protocol revision adds them to the validated signature registry.
 
 ## What concretely breaks beyond size
 
@@ -72,16 +72,16 @@ Not "replace ECRECOVER":
 
 1. **New precompile**, e.g. `MLDSA65_VERIFY(pk, msg_hash, sig)` returning a 32-byte boolean. RIP-7212 set the precedent for `secp256r1` verify.
 2. **Account abstraction does the identity binding.** EIP-7702 + 4337 wallets store the `pk` and call the verify precompile inside `validateUserOp` / `isValidSignature`.
-3. **Tx-envelope-level PQ** is a network upgrade: a new tx type carrying a *pointer* to a registered `pk`, with consensus verifying rather than recovering.
+3. **Tx-envelope-level PQ** is a network upgrade: the transaction must carry or resolve the public key and consensus or account code verifies rather than recovers.
 
 ## How EIP-8141 signer binding threads the needle
 
-Signer binding does not try to keep recovery semantics for PQ accounts (the math forbids it). Instead a PQ VERIFY frame proves `(digest, address)` ahead of execution and `ECRECOVER` looks the answer up. The 0x01 ABI keeps returning an address; the recovery step is replaced by a table consult populated from `verify(pk, msg, sig)` in a prior frame. Immutable contracts continue to work without redesign.
+Signer binding does not try to keep recovery semantics for PQ accounts (the math forbids it). Instead account code in a binding `VERIFY` frame proves `(digest, address)` ahead of execution and `ECRECOVER` looks the answer up. The 0x01 ABI keeps returning an address; the recovery step is replaced by a transaction-scoped table consult populated after `verify(pk, msg, sig)` or an equivalent account policy succeeds. Immutable contracts continue to work without redesign.
 
-The mechanism is curve-independent: it needs only `verify(pk, msg, sig) -> bool` and an address-derivation rule per scheme. Concrete scheme parameters belong in the `signature_type` registry that ships alongside whichever alternative lands. The proposals themselves stay agnostic so that adding ML-DSA-65 today and MAYO-2 later doesn't require reopening the consensus spec.
+The mechanism is curve-independent: it needs only account code capable of authorizing a digest. Concrete schemes can arrive through `ARBITRARY` signature entries and later move into the protocol-validated signature registry without changing the binding-table shape.
 
-## AuthManager storage cost per pubkey
+## Public-key placement tradeoff
 
-The Solidity reference contract stores pubkeys as `bytes` (dynamic): one length slot plus `1 + ceil(len/32)` data slots per entry. A `getSigner` lookup touches all of them. Per scheme: SLH-DSA-128s = 2 slots, SLH-DSA-256s = 3, Falcon-512 = 30, MAYO-1 = 38, ML-DSA-44 = 42, Falcon-1024 = 58, ML-DSA-65 = 62, ML-DSA-87 = 82, MAYO-3 = 84, MAYO-5 = 158, MAYO-2 = 173. Clients pinning the Solidity contract MUST charge witness and access cost for the full per-entry slot count; clients implementing native behavior MUST publish their effective per-pubkey slot count and access-cost rule so mempool simulation cost is uniform across implementations.
+A Solidity dynamic `bytes` value uses a length slot plus enough data slots for the key. Kilobyte-scale keys therefore occupy dozens or hundreds of persistent slots and require corresponding witnesses when read. Transaction calldata repeats the key but creates no durable state. A future alias can amortize repeated keys after its state and pricing model are justified. The signer-binding proposal stays neutral among these choices.
 
 See [`appendix/verified-signers.md`](verified-signers.md) for the verified-signers-table spec.

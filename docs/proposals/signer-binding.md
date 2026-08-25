@@ -1,122 +1,62 @@
 # Signer Binding for EIP-8141
 
-```
-Status:             research draft
-Depends on:         EIP-8141 + guarantors
-Introduces:         PubkeyRegistry, verified-signers table, modified ECRECOVER
-Shared appendices:  system-contracts, verified-signers, mempool-tiers, sighash-binding, pq-analysis
-```
+_Individual alternative and part of the consolidated draft._
 
-## 1. Status and scope
+## Problem
 
-Individual alternative. Adds a tx-scoped mechanism that lets PQ accounts be recognized by immutable contracts that call `ECRECOVER` on application digests. The secp256k1 path is byte-for-byte unchanged. Constraints respected (no new opcodes, precompiles, frame modes, account-encoding changes, sighash changes) are listed in [`docs/overview.md`](../overview.md). Identified as the minimum requirement in [`docs/priorities.md`](../priorities.md).
+EIP-8141's signature list lets new account code consume secp256k1, P256, or `ARBITRARY` witnesses. Existing immutable contracts still call `ECRECOVER(digest, v, r, s)` and compare the result with an owner address. Without a compatibility path, non-secp256k1 accounts cannot use those contracts' permit and meta-transaction surfaces.
 
-## 2. Motivation
+## Single-line delta
 
-EIP-8141's tx-level authentication is PQ-flexible via the VERIFY-frame `signature_type` byte. But immutable contracts that call `ECRECOVER` on an application digest (ERC-2612 `permit`, WETH, raw `ecrecover`) derive the signer from a secp256k1 signature and cannot be redeployed. PQ accounts are locked out of every existing such contract. Signer binding lets a PQ VERIFY frame bind `(digest, account)` claims that `ECRECOVER` resolves on subsequent calls within the same tx, so legacy contracts continue to work without redesign.
+A standalone `VERIFY` frame marked `SIGNER_BINDING_FLAG` returns application digests authorized by its target account. The protocol stores `digest -> target` for the transaction. `ECRECOVER` checks this table before its unchanged secp256k1 path.
 
-## 3. Priorities and non-goals
+## Normative shape
 
-Priorities:
+- `SIGNER_BINDING_FLAG = 0x10`.
+- A binding frame must use `VERIFY`, have an explicit non-null target, and carry no approval scope.
+- The frame executes account code under normal `VERIFY` restrictions.
+- Successful return data is a non-empty concatenation of 32-byte digests.
+- Each digest binds to `frame.target`.
+- Duplicate pairs are no-ops; same-digest conflicts revert.
+- `MAX_BOUND_SIGNERS = 8` caps unique entries.
+- The table is cleared at transaction entry and discarded at transaction exit.
 
-1. `ECRECOVER` keeps its `(digest, v, r, s)` shape and miss-path semantics.
-2. Binding is additive; secp256k1 accounts unaffected.
-3. Single pubkey source: `PubkeyRegistry`. Inline envelope pubkeys are explicitly rejected.
-4. Tx-scoped table only. No persistent state pollution.
+## Authorization sources
 
-Non-goals:
+The account decides how to authorize each digest:
 
-- Block-builder aggregation (defer to PQ stage 2).
-- Cross-tx binding (would expand replay surface).
-- Non-32-byte digests.
-- Inline envelope pubkeys.
-- Pubkey rotation outside `PubkeyRegistry.register` + `clear`.
+- a protocol-validated P256 or secp256k1 entry can be inspected with `SIGPARAM`;
+- a post-quantum or other custom witness can be read from an `ARBITRARY` entry with `SIGDATACOPY`;
+- account storage, delegation, recovery policy, or multiple signatures may participate under ordinary account code.
 
-## 4. Single-line spec delta
+No protocol pubkey registry is required. Large public keys can remain in transaction witness data or use a future EIP-8141 public-key-alias extension. This follows EIP-8130's useful separation: protocol state identifies authority, while scheme-specific public material need not occupy persistent slots.
 
-Deploy immutable `PubkeyRegistry` at a reserved address. A successful PQ VERIFY frame using the binding-payload sub-mode writes `digest -> frame.target` into a tx-scoped verified-signers map after resolving the account's pubkey from the registry. `ECRECOVER` consults the map first; hit returns the bound address, miss falls through to existing secp256k1 recovery. Binding-only frames do not authorize the transaction; tx-auth uses a separate sub-mode that signs `compute_sig_hash(tx)`.
+## Modified `ECRECOVER`
 
-## 5. Normative spec
-
-### Why registry-only (no envelope inlining)
-
-The pubkey-size case is exclusive to lattice (897 B-2.6 KB) and multivariate (1.2-5.5 KB); inlining kilobyte-scale pubkeys per tx multiplies mempool bandwidth and witness size. Hash-based pubkeys (32-64 B) would be fine to inline on size grounds, but supporting both pubkey-by-reference and pubkey-by-value forks the protocol into two binding chains, two mempool admission stories, and two RPC shapes for one logical capability. Registry-only is uniform across all PQ families and bounds per-tx cost to one storage slot read regardless of scheme. Size and threat-model analysis in [`appendix/pq-analysis.md`](../appendix/pq-analysis.md).
-
-### Registry
-
-`PubkeyRegistry` (interface, deployment, immutability rationale, code-hash pinning, first-use cost) is specified in [`appendix/system-contracts.md`](../appendix/system-contracts.md). Per-account `(scheme_id, pubkey_bytes)` keyed by address; `register` is `msg.sender == account` only.
-
-### Verified-signers table and modified ECRECOVER
-
-Lifecycle, population rule, conflict semantics, and modified `ECRECOVER` pseudocode are specified in [`appendix/verified-signers.md`](../appendix/verified-signers.md). Summary:
-
-- Table is tx-scoped, shape `map[digest32 -> address]`: cleared at tx entry, populated during VERIFY, queried during SENDER.
-- A binding VERIFY frame MUST use the **binding payload** sub-mode (`sub_mode = 0x01`): `frame.data = [signature_type, 0x01, application_digest (32 B), signature]`. The signature MUST verify under `PubkeyRegistry.get(frame.target)`. The frame MUST NOT call `APPROVE` for any tx-execution, payment, or guarantee scope; binding is its own role. A separate **tx-auth** sub-mode (`sub_mode = 0x00`) is what authorizes tx execution / payment via a signature over `compute_sig_hash(tx)`. The split prevents a PQ signature over an arbitrary application digest from authorizing the transaction itself.
-- Conflicts (same `digest`, different `address`) MUST revert the frame; duplicate inserts of the same `(digest, address)` are no-ops.
-- `ECRECOVER` MUST consult the table first; on miss, MUST fall through to existing secp256k1 recovery byte-identically.
-- Per-tx cap: `MAX_BOUND_SIGNERS = 8` map entries (MUST NOT exceed).
-
-## 6. Mempool behavior
-
-Tier semantics in [`appendix/mempool-tiers.md`](../appendix/mempool-tiers.md).
-
-### Consensus-relevant (MUST)
-
-- **Cap enforcement:** `MAX_BOUND_SIGNERS = 8` per tx (also §5). Exceeding causes the binding frame to revert.
-- **Conflict revert:** a `(digest, address)` conflict in a binding frame reverts the frame (also §5).
-
-### Node policy (SHOULD)
-
-- **Restrictive-tier admission:** pubkey resolution is one storage slot read on `PubkeyRegistry`. PQ verification gas is absorbed by the 100 000 validation-prefix budget once stage-2 PQ precompiles ship; before then, binding txs route through the expansive tier.
-- **Sighash:** in-frame digest claims sit inside VERIFY data, elided as today. RBF and block-invalidation are unchanged; the verified-signers table is rebuilt per-tx.
-
-## 7. RPC and wallet surface
-
-```
-eth_getRegisteredPubkey(address, blockTag) → (uint16, bytes) | null
-eth_simulateSignerBinding(tx)              → list[(digest, address)]
+```python
+if digest in verified_signers:
+    return verified_signers[digest]
+return existing_secp256k1_recover(digest, v, r, s)
 ```
 
-Error codes: `pubkey_not_registered`, `pubkey_scheme_mismatch`, `pubkey_address_mismatch`, `signer_binding_cap_exceeded`.
+On a hit, `v`, `r`, and `s` are ignored. On a miss, behavior is byte-for-byte unchanged. The precompile keeps its existing gas price.
 
-Wallet UX: surface "this tx will let `<contract>` recognize you as `<address>` via `permit`" before signing. Hardware wallets parse the registry registration tx natively as a one-time onboarding step. Permit composition: the wallet adds a binding VERIFY frame whose `digest` matches the EIP-712 hash the contract recomputes; the SENDER frame calls `permit(...)` normally; the contract's internal `ecrecover` resolves via the bound entry.
+## Mempool
 
-## 8. Security and DoS analysis
+Binding frames normally appear after payer approval and are outside the public validation prefix. Their success remains consensus-critical. A guarantor does not turn binding failure into a tolerated sender-validation failure because the binding frame has no `APPROVE_EXECUTION` scope.
 
-- **Binding integrity.** A binding claim's integrity comes from the PQ-signature-over-pubkey check at VERIFY time, not from tx-sighash binding (Class B in [`appendix/sighash-binding.md`](../appendix/sighash-binding.md)). The pubkey is fetched from the registry under `frame.target`, so a binding cannot be forged without a valid signature under that account's registered pubkey.
-- **Conflict handling.** Write-once entries prevent later frames from silently overriding earlier bindings. Conflicts revert; partial binding state cannot leak.
-- **Cap.** `MAX_BOUND_SIGNERS = 8` bounds table-population cost; matches approve + swap + repay redemption shapes.
-- **Mempool DoS.** Without stage-2 PQ precompiles, PQ verify is a CPU cost in restrictive tier. Routing PQ-binding txs to the expansive tier in the interim avoids public-mempool DoS.
-- **Registry growth.** Bounded by one entry per registered account; PQ migration is infrequent and pubkey calldata dominates first-registration cost.
-- **EIP-8151 composition.** A revoked-secp256k1 account with a registered PQ pubkey resolves only via signer binding; un-bound digests return zero. No silent recovery to a revoked key.
+## Wallet flow
 
-## 9. Compatibility and interactions
+For an ERC-2612 permit:
 
-- **Flexible nonces:** orthogonal. Binding scope is tx-local; nonce-stream selection is tx-level.
-- **Envelope expiry / Validity windows:** orthogonal. The verified-signers table is rebuilt per-tx; expiry / window enforcement runs before any frame.
-- **Guarantors:** orthogonal. A guarantor-backed tx may include binding PQ VERIFY frames; the guarantor's commitment is independent.
-- **EIP-8151:** complementary. EIP-8151 zeros revoked-key recovery; signer binding provides the positive PQ path for the same address.
-- **EIP-8164:** complementary. EIP-8164 reserves an address space rooted in a PQ pubkey hash; signer binding lets that address be recognized by immutable `ECRECOVER` callers.
-- **vs. EIP-8151 alone:** EIP-8151 zeros `ecrecover` for revoked keys, bricking `permit` for migrated accounts. Signer binding restores the positive path.
-- **vs. redeploying every contract:** no realistic path for WETH, ERC-2612 ERC-20s, Uniswap V2 pairs.
-- **vs. a new `PQVERIFY` precompile:** helps only contracts written after it lands; signer binding helps contracts already deployed.
+1. include the permit digest and authorization as a signature entry;
+2. run a binding frame against the owner account;
+3. return the permit digest after verification;
+4. call `permit` in a `SENDER` frame with placeholder `v`, `r`, and `s`;
+5. the token's existing `ECRECOVER` call resolves to the bound owner.
 
-## 10. Open questions
+Wallets must display the digest, target account, and downstream contract/action before requesting authorization.
 
-None block this proposal.
+## Security
 
-## 11. Appendix references
-
-- [`appendix/system-contracts.md`](../appendix/system-contracts.md) for `PubkeyRegistry`.
-- [`appendix/verified-signers.md`](../appendix/verified-signers.md) for table lifecycle and modified `ECRECOVER`.
-- [`appendix/pq-analysis.md`](../appendix/pq-analysis.md) for scheme sizes and the registry-only argument.
-- [`appendix/mempool-tiers.md`](../appendix/mempool-tiers.md) for tier semantics.
-- [`appendix/sighash-binding.md`](../appendix/sighash-binding.md) for Class B reasoning.
-
-## 12. EIP-ready delta
-
-1. Deploy immutable `PubkeyRegistry` per [`appendix/system-contracts.md`](../appendix/system-contracts.md).
-2. Tx-scoped verified-signers table per [`appendix/verified-signers.md`](../appendix/verified-signers.md).
-3. `ECRECOVER` extended: hit-path returns bound address; miss-path unchanged.
-4. Mempool: `MAX_BOUND_SIGNERS = 8`; restrictive tier admits registry-source binding.
-5. RPC: `eth_getRegisteredPubkey`, `eth_simulateSignerBinding`, four error codes.
+Returning a digest grants legacy-signature recognition for the remainder of the transaction. Account code must authenticate the application digest itself and must not infer authorization merely from the transaction's canonical hash. The cap and conflict rule prevent unbounded or ambiguous table population.
